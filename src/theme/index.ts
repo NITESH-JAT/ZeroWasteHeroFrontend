@@ -1,3 +1,4 @@
+//src/theme/index.ts
 import { Theme } from "@react-navigation/native";
 
 export const colors = {

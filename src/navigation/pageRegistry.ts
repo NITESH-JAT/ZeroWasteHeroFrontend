@@ -1,3 +1,4 @@
+//src/navigation/pageRegistry.ts
 type PageAction = {
   label: string;
   pageId?: string;

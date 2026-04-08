@@ -1,3 +1,4 @@
+//src/screens/tabs/ActionScreen.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -58,14 +59,14 @@ const SecondaryActionCard = ({ title, icon, color, onPress }: any) => (
 
 // --- ROLE-SPECIFIC ACTION LAYOUTS ---
 
-const CitizenActions = ({ openPage }: { openPage: (pageId: AppPageId) => void }) => (
+const CitizenActions = ({ openPage, navigation }: any) => (
   <View style={styles.actionLayout}>
     <PrimaryActionCard 
       title="Report Waste" 
       subtitle="Snap a photo & geo-tag to earn points" 
       icon="camera" 
       accent="#00D65B" 
-      onPress={() => openPage("reportWaste")}
+      onPress={() => navigation.navigate("ReportWaste")} // Direct stack navigation
     />
     <View style={styles.secondaryGrid}>
       <SecondaryActionCard title="AR Waste Hunt" icon="view-grid-plus" color="#00D65B" onPress={() => openPage("arWasteHunt")} />
@@ -74,7 +75,7 @@ const CitizenActions = ({ openPage }: { openPage: (pageId: AppPageId) => void })
   </View>
 );
 
-const NgoActions = ({ openPage }: { openPage: (pageId: AppPageId) => void }) => (
+const NgoActions = ({ openPage }: any) => (
   <View style={styles.actionLayout}>
     <PrimaryActionCard 
       title="Create Campaign" 
@@ -90,14 +91,14 @@ const NgoActions = ({ openPage }: { openPage: (pageId: AppPageId) => void }) => 
   </View>
 );
 
-const WorkerActions = ({ openPage }: { openPage: (pageId: AppPageId) => void }) => (
+const WorkerActions = ({ openPage, navigation }: any) => (
   <View style={styles.actionLayout}>
     <PrimaryActionCard 
       title="Close Active Task" 
       subtitle="Upload after-cleaning proof photo" 
       icon="camera-burst" 
       accent="#F59E0B" 
-      onPress={() => openPage("closeActiveTask")}
+      onPress={() => navigation.navigate("WorkerTask")} // Direct stack navigation
     />
     <View style={styles.secondaryGrid}>
       <SecondaryActionCard title="Report Issue" icon="alert-octagon" color="#F43F5E" onPress={() => openPage("reportIssue")} />
@@ -106,14 +107,14 @@ const WorkerActions = ({ openPage }: { openPage: (pageId: AppPageId) => void }) 
   </View>
 );
 
-const ChampionActions = ({ openPage }: { openPage: (pageId: AppPageId) => void }) => (
+const ChampionActions = ({ openPage, navigation }: any) => (
   <View style={styles.actionLayout}>
     <PrimaryActionCard 
       title="Verify Reports" 
       subtitle="Review pending citizen uploads" 
       icon="check-decagram" 
       accent="#8B5CF6" 
-      onPress={() => openPage("verifyReports")}
+      onPress={() => navigation.navigate("VerifyReports")} // Direct stack navigation
     />
     <View style={styles.secondaryGrid}>
       <SecondaryActionCard title="Flagged Items" icon="flag" color="#F43F5E" onPress={() => openPage("flaggedItems")} />
@@ -122,7 +123,7 @@ const ChampionActions = ({ openPage }: { openPage: (pageId: AppPageId) => void }
   </View>
 );
 
-const AuthorityActions = ({ openPage }: { openPage: (pageId: AppPageId) => void }) => (
+const AuthorityActions = ({ openPage }: any) => (
   <View style={styles.actionLayout}>
     <PrimaryActionCard 
       title="Issue Penalty" 
@@ -137,6 +138,24 @@ const AuthorityActions = ({ openPage }: { openPage: (pageId: AppPageId) => void 
     </View>
   </View>
 );
+
+// --- NEW SCRAPPER ACTIONS ---
+const ScrapperActions = ({ navigation }: any) => (
+  <View style={styles.actionLayout}>
+    <PrimaryActionCard 
+      title="Marketplace Feed" 
+      subtitle="Browse and bid on local citizen scrap" 
+      icon="storefront-outline" 
+      accent="#14B8A6" 
+      onPress={() => navigation.navigate("Explore")} // Assuming "Explore" acts as their Marketplace tab
+    />
+    <View style={styles.secondaryGrid}>
+      <SecondaryActionCard title="My Bids" icon="hand-coin-outline" color="#14B8A6" onPress={() => console.log("Navigate to active bids")} />
+      <SecondaryActionCard title="Set Reminder" icon="bell-ring-outline" color="#0F172A" onPress={() => console.log("Navigate to schedule")} />
+    </View>
+  </View>
+);
+
 
 // --- MAIN SCREEN COMPONENT ---
 export function ActionScreen() {
@@ -170,11 +189,12 @@ export function ActionScreen() {
             </View>
           ) : (
             <View style={styles.content}>
-              {activeRole === "citizen" && <CitizenActions openPage={openPage} />}
-              {activeRole === "ngo" && <NgoActions openPage={openPage} />}
-              {activeRole === "worker" && <WorkerActions openPage={openPage} />}
-              {activeRole === "champion" && <ChampionActions openPage={openPage} />}
-              {activeRole === "authority" && <AuthorityActions openPage={openPage} />}
+              {activeRole === "citizen" && <CitizenActions openPage={openPage} navigation={navigation} />}
+              {activeRole === "ngo" && <NgoActions openPage={openPage} navigation={navigation} />}
+              {activeRole === "worker" && <WorkerActions openPage={openPage} navigation={navigation} />}
+              {activeRole === "champion" && <ChampionActions openPage={openPage} navigation={navigation} />}
+              {activeRole === "authority" && <AuthorityActions openPage={openPage} navigation={navigation} />}
+              {activeRole === "scrapper" && <ScrapperActions navigation={navigation} />}
             </View>
           )}
           
@@ -187,163 +207,28 @@ export function ActionScreen() {
   );
 }
 
-// --- STYLES ---
+// --- STYLES (Unchanged) ---
 const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: "#F8FAFC",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  /* --- BACKGROUND BLOBS --- */
-  bgBlobGreen: {
-    position: "absolute",
-    top: "5%",
-    left: -80,
-    width: width * 0.8,
-    height: width * 0.8,
-    borderRadius: width * 0.4,
-    backgroundColor: "#00D65B",
-    opacity: 0.04,
-  },
-  bgBlobBlue: {
-    position: "absolute",
-    bottom: "20%",
-    right: -100,
-    width: width * 0.9,
-    height: width * 0.9,
-    borderRadius: width * 0.45,
-    backgroundColor: "#0EA5E9",
-    opacity: 0.04,
-  },
-  /* --- HEADER --- */
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === "ios" ? 12 : 24,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 34,
-    fontWeight: "800",
-    color: "#0F172A",
-    letterSpacing: -1,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#64748B",
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-  },
-  content: {
-    flex: 1,
-  },
-  actionLayout: {
-    gap: 16,
-  },
-  /* --- PRIMARY ACTION CARD --- */
-  primaryCard: {
-    borderRadius: 32,
-    padding: 28,
-    flexDirection: "column",
-    justifyContent: "space-between",
-    minHeight: 220,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  primaryIconBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  primaryTextWrap: {
-    marginBottom: 8,
-  },
-  primaryTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: -0.5,
-    marginBottom: 6,
-  },
-  primarySubtitle: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "rgba(255,255,255,0.9)",
-    lineHeight: 22,
-    paddingRight: 40,
-  },
-  primaryArrowBox: {
-    position: "absolute",
-    bottom: 28,
-    right: 28,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  /* --- SECONDARY ACTION GRID --- */
-  secondaryGrid: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  secondaryCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 28,
-    padding: 24,
-    alignItems: "center",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  secondaryIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  secondaryTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#0F172A",
-    textAlign: "center",
-  },
-  /* --- EMPTY STATE --- */
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#94A3B8",
-    marginTop: 16,
-  },
+  safeArea: { backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  bgBlobGreen: { position: "absolute", top: "5%", left: -80, width: width * 0.8, height: width * 0.8, borderRadius: width * 0.4, backgroundColor: "#00D65B", opacity: 0.04 },
+  bgBlobBlue: { position: "absolute", bottom: "20%", right: -100, width: width * 0.9, height: width * 0.9, borderRadius: width * 0.45, backgroundColor: "#0EA5E9", opacity: 0.04 },
+  header: { paddingHorizontal: 24, paddingTop: Platform.OS === "ios" ? 12 : 24, paddingBottom: 16 },
+  title: { fontSize: 34, fontWeight: "800", color: "#0F172A", letterSpacing: -1, marginBottom: 6 },
+  subtitle: { fontSize: 15, fontWeight: "500", color: "#64748B" },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 8 },
+  content: { flex: 1 },
+  actionLayout: { gap: 16 },
+  primaryCard: { borderRadius: 32, padding: 28, flexDirection: "column", justifyContent: "space-between", minHeight: 220, shadowColor: "#0F172A", shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 8 },
+  primaryIconBox: { width: 72, height: 72, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.2)", justifyContent: "center", alignItems: "center", marginBottom: 24 },
+  primaryTextWrap: { marginBottom: 8 },
+  primaryTitle: { fontSize: 28, fontWeight: "800", color: "#FFFFFF", letterSpacing: -0.5, marginBottom: 6 },
+  primarySubtitle: { fontSize: 15, fontWeight: "500", color: "rgba(255,255,255,0.9)", lineHeight: 22, paddingRight: 40 },
+  primaryArrowBox: { position: "absolute", bottom: 28, right: 28, width: 48, height: 48, borderRadius: 24, backgroundColor: "#FFFFFF", justifyContent: "center", alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 },
+  secondaryGrid: { flexDirection: "row", gap: 16 },
+  secondaryCard: { flex: 1, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 28, padding: 24, alignItems: "center", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
+  secondaryIconBox: { width: 56, height: 56, borderRadius: 18, justifyContent: "center", alignItems: "center", marginBottom: 16 },
+  secondaryTitle: { fontSize: 15, fontWeight: "800", color: "#0F172A", textAlign: "center" },
+  emptyState: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 60 },
+  emptyText: { fontSize: 16, fontWeight: "600", color: "#94A3B8", marginTop: 16 },
 });
-

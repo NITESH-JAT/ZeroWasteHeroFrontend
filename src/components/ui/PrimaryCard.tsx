@@ -1,3 +1,4 @@
+//src/components/ui/PrimaryCard.tsx
 import { PropsWithChildren } from "react";
 import { StyleSheet, View } from "react-native";
 import { appTheme } from "../../theme";

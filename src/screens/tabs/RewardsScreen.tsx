@@ -1,3 +1,4 @@
+//src/screens/tabs/RewardsScreen.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -17,6 +18,8 @@ const roleConfig = {
   worker: { accent: "#F59E0B", icon: "medal", currency: "Earned Points" },
   champion: { accent: "#8B5CF6", icon: "star-circle", currency: "Community Pool" },
   authority: { accent: "#F43F5E", icon: "bank", currency: "CSR Funding" },
+  // ADDED SCRAPPER CONFIG
+  scrapper: { accent: "#14B8A6", icon: "wallet-outline", currency: "Marketplace Spend" },
 };
 
 const SectionHeader = ({ title, actionText, onPress }: any) => (
@@ -141,9 +144,15 @@ const MeshWalletCard = ({ config, balance, subtext, onHistoryPress }: any) => (
   </View>
 );
 
-const CitizenRewards = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
+// LIVE DATA INTEGRATION HERE
+const CitizenRewards = ({ config, openPage, userProfile }: any) => (
   <>
-    <MeshWalletCard config={config} balance="3,250" subtext="Equivalent to Rs325 in value" onHistoryPress={() => openPage("rewardHistory")} />
+    <MeshWalletCard 
+      config={config} 
+      balance={userProfile?.greenPoints?.toLocaleString() || "0"} 
+      subtext="Redeem points for real-world rewards" 
+      onHistoryPress={() => openPage("rewardHistory")} 
+    />
 
     <SectionHeader title="My Badges" />
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
@@ -159,83 +168,69 @@ const CitizenRewards = ({ config, openPage }: { config: any; openPage: (pageId: 
       <RewardItemCard icon="bus" title="Transit Pass" description="Free day pass for city bus" points="800" color="#8B5CF6" onPress={() => openPage("transitPass")} />
       <RewardItemCard icon="shopping" title="Grocery Coupon" description="10% off at local stores" points="1000" color="#F59E0B" onPress={() => openPage("groceryCoupon")} />
     </View>
-
-    <SectionHeader title="Streak Bonuses" actionText="Details" onPress={() => openPage("streakBonuses")} />
-    <View style={styles.actionList}>
-      <ActionListItem icon="fire" title="7-Day Streak Bonus" subtitle="Keep your daily activity active to unlock the next payout" color="#8B5CF6" onPress={() => openPage("streakBonuses")} />
-    </View>
   </>
 );
 
-const WorkerRewards = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
+const WorkerRewards = ({ config, openPage }: any) => (
   <>
     <MeshWalletCard config={config} balance="1,800" subtext="Performance-linked earnings and incentives" onHistoryPress={() => openPage("incentiveSummary")} />
-
     <SectionHeader title="Recognition Badges" />
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
       <BadgeCard icon="medal-outline" title="Fast Closer" color="#F59E0B" onPress={() => openPage("badgesOverview")} />
       <BadgeCard icon="shield-check-outline" title="Safe Worker" color="#0EA5E9" onPress={() => openPage("badgesOverview")} />
-      <BadgeCard icon="check-decagram-outline" title="Quality Proof" color="#00D65B" onPress={() => openPage("badgesOverview")} />
     </ScrollView>
-
-    <SectionHeader title="Performance & Completion" actionText="Open" onPress={() => openPage("performanceScore")} />
-    <View style={styles.actionList}>
-      <ActionListItem icon="speedometer" title="Performance Score" subtitle="Overall score from task speed, proof quality, and consistency" color="#8B5CF6" onPress={() => openPage("performanceScore")} />
-      <ActionListItem icon="chart-bar" title="Daily / Weekly Completion Stats" subtitle="Review today and weekly completion totals" color="#0EA5E9" onPress={() => openPage("workerCompletionStats")} />
-    </View>
-
-    <SectionHeader title="Incentive Summary" actionText="Details" onPress={() => openPage("incentiveSummary")} />
-    <View style={styles.actionList}>
-      <ActionListItem icon="cash-multiple" title="Incentive Summary" subtitle="See earned points, pending payouts, and quality bonuses" color={config.accent} onPress={() => openPage("incentiveSummary")} />
-    </View>
   </>
 );
-const NgoRewards = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
+
+const NgoRewards = ({ config, openPage }: any) => (
   <>
     <MeshWalletCard config={config} balance="50,000" subtext="Allocated budget for campaigns" onHistoryPress={() => openPage("campaignRewardsSummary")} />
-
     <SectionHeader title="NGO Recognition Badges" actionText="View" onPress={() => openPage("ngoRecognition")} />
     <View style={styles.actionList}>
       <ActionListItem icon="certificate-outline" title="NGO Recognition" subtitle="View your platinum partner badge" color="#F59E0B" onPress={() => openPage("ngoRecognition")} />
     </View>
-
-    <SectionHeader title="Impact & Contribution" actionText="Insights" onPress={() => openPage("contributionInsights")} />
-    <View style={styles.actionList}>
-      <ActionListItem icon="flag-checkered" title="Impact Milestones" subtitle="Track major organization milestones" color="#00D65B" onPress={() => openPage("impactMilestones")} />
-      <ActionListItem icon="chart-donut" title="Contribution Insights" subtitle="See volunteer and partner contribution trends" color="#8B5CF6" onPress={() => openPage("contributionInsights")} />
-    </View>
-
-    <SectionHeader title="Campaign Rewards Summary" actionText="Open" onPress={() => openPage("campaignRewardsSummary")} />
-    <View style={styles.actionList}>
-      <ActionListItem icon="hand-coin-outline" title="Allocate Campaign Rewards" subtitle="Set points per volunteer" color={config.accent} onPress={() => openPage("allocateCampaignRewards")} />
-      <ActionListItem icon="gift-outline" title="Campaign Rewards Summary" subtitle="Review budget allocation and issued points" color={config.accent} onPress={() => openPage("campaignRewardsSummary")} />
-    </View>
   </>
 );
-const ChampionRewards = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
+
+const ChampionRewards = ({ config, openPage }: any) => (
   <>
     <MeshWalletCard config={config} balance="10,000" subtext="Monthly bonus pool for Ward 15" onHistoryPress={() => openPage("rewardHistory")} />
     <SectionHeader title="Community Allocation" />
     <View style={styles.actionList}>
       <ActionListItem icon="medal-outline" title="Award Bonus Points" subtitle="Distribute to top performing blocks" color={config.accent} onPress={() => openPage("awardBonusPoints")} />
-      <ActionListItem icon="history" title="Distribution Logs" subtitle="View past allocations" color="#0F172A" onPress={() => openPage("distributionLogs")} />
     </View>
   </>
 );
 
-const AuthorityRewards = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
+const AuthorityRewards = ({ config, openPage }: any) => (
   <>
     <MeshWalletCard config={config} balance="Rs2.5M" subtext="Total CSR & Sponsorship Funding" onHistoryPress={() => openPage("rewardHistory")} />
     <SectionHeader title="Ecosystem Funding" />
     <View style={styles.actionList}>
-      <ActionListItem icon="handshake-outline" title="Partner Management" subtitle="Manage corporate sponsors" color={config.accent} onPress={() => openPage("partnerManagement")} />
       <ActionListItem icon="bank-transfer" title="Fund Allocation" subtitle="Distribute budgets to NGOs" color="#0EA5E9" onPress={() => openPage("fundAllocation")} />
     </View>
   </>
 );
 
+// NEW SCRAPPER DASHBOARD
+const ScrapperRewards = ({ config, openPage }: any) => (
+  <>
+    <MeshWalletCard config={config} balance="₹0" subtext="Total earnings tracked from accepted bids" onHistoryPress={() => console.log("History")} />
+    <SectionHeader title="Marketplace Badges" />
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+      <BadgeCard icon="star-circle-outline" title="Top Buyer" color="#F59E0B" onPress={() => console.log("Badges")} />
+      <BadgeCard icon="truck-fast-outline" title="Fast Pickup" color="#14B8A6" onPress={() => console.log("Badges")} />
+    </ScrollView>
+    <SectionHeader title="Analytics" />
+    <View style={styles.actionList}>
+      <ActionListItem icon="chart-line" title="Spending Report" subtitle="View your bid success rate and total spend." color={config.accent} onPress={() => console.log("Analytics")} />
+    </View>
+  </>
+);
+
 export function RewardsScreen() {
-  const activeRole = useAppStore((state) => state.activeRole);
+  // PULLED USER PROFILE FROM STATE
+  const { activeRole, userProfile } = useAppStore();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   if (!activeRole) {
@@ -264,11 +259,12 @@ export function RewardsScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {activeRole === "citizen" && <CitizenRewards config={currentConfig} openPage={openPage} />}
+          {activeRole === "citizen" && <CitizenRewards config={currentConfig} openPage={openPage} userProfile={userProfile} />}
           {activeRole === "worker" && <WorkerRewards config={currentConfig} openPage={openPage} />}
           {activeRole === "ngo" && <NgoRewards config={currentConfig} openPage={openPage} />}
           {activeRole === "champion" && <ChampionRewards config={currentConfig} openPage={openPage} />}
           {activeRole === "authority" && <AuthorityRewards config={currentConfig} openPage={openPage} />}
+          {activeRole === "scrapper" && <ScrapperRewards config={currentConfig} openPage={openPage} />}
 
           <View style={{ height: 140 }} />
         </ScrollView>
@@ -289,17 +285,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, fontWeight: "500", color: "#64748B" },
   scrollContent: { paddingHorizontal: 24, paddingTop: 8 },
   walletWrapper: { marginBottom: 32 },
-  walletCard: {
-    borderRadius: 32,
-    backgroundColor: "#0B1120",
-    padding: 28,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    elevation: 12,
-  },
+  walletCard: { borderRadius: 32, backgroundColor: "#0B1120", padding: 28, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.25, shadowRadius: 24, elevation: 12 },
   walletGlow1: { position: "absolute", top: -60, right: -20, width: 200, height: 200, borderRadius: 100, opacity: 0.15 },
   walletGlow2: { position: "absolute", bottom: -80, left: -40, width: 240, height: 240, borderRadius: 120, opacity: 0.1 },
   walletBgIcon: { position: "absolute", right: -30, bottom: -30, opacity: 0.04, transform: [{ rotate: "-15deg" }] },
@@ -317,36 +303,11 @@ const styles = StyleSheet.create({
   sectionActionPill: { backgroundColor: "#F1F5F9", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 12 },
   sectionActionText: { fontSize: 13, fontWeight: "800", color: "#64748B" },
   horizontalScroll: { paddingBottom: 32, gap: 16 },
-  badgeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 20,
-    width: 110,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
-  },
+  badgeCard: { backgroundColor: "#FFFFFF", borderRadius: 24, padding: 20, width: 110, alignItems: "center", borderWidth: 1, borderColor: "#E2E8F0", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2 },
   badgeIconWrap: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, justifyContent: "center", alignItems: "center", marginBottom: 12, backgroundColor: "#F8FAFC" },
   badgeTitle: { fontSize: 13, fontWeight: "700", color: "#0F172A", textAlign: "center" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 16, justifyContent: "space-between" },
-  rewardCard: {
-    width: (width - 48 - 16) / 2,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.03,
-    shadowRadius: 12,
-    elevation: 2,
-  },
+  rewardCard: { width: (width - 48 - 16) / 2, backgroundColor: "#FFFFFF", borderRadius: 24, padding: 20, borderWidth: 1, borderColor: "#E2E8F0", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.03, shadowRadius: 12, elevation: 2 },
   rewardCardPressed: { transform: [{ scale: 0.96 }] },
   rewardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
   rewardIconBox: { width: 48, height: 48, borderRadius: 16, justifyContent: "center", alignItems: "center" },
@@ -358,26 +319,9 @@ const styles = StyleSheet.create({
   redeemBtnPressed: { opacity: 0.9, transform: [{ scale: 0.97 }] },
   redeemBtnText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
   actionList: { gap: 12 },
-  actionListItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 1,
-  },
+  actionListItem: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, borderWidth: 1, borderColor: "#E2E8F0", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 8, elevation: 1 },
   actionListIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: "center", alignItems: "center", marginRight: 16 },
   actionListContent: { flex: 1, marginRight: 12 },
   actionListTitle: { fontSize: 16, fontWeight: "800", color: "#0F172A", marginBottom: 4 },
   actionListSubtitle: { fontSize: 13, color: "#64748B", fontWeight: "500" },
 });
-
-
-
-

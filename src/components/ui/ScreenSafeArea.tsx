@@ -1,3 +1,4 @@
+//src/components/ui/ScreenSafeArea.tsx
 import { PropsWithChildren } from "react";
 import { StyleSheet, ViewStyle } from "react-native";
 import { Edge, SafeAreaView } from "react-native-safe-area-context";

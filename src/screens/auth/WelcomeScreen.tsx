@@ -1,3 +1,4 @@
+//src/screens/auth/WelcomeScreen.tsx
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Pressable, StyleSheet, Text, View, Dimensions } from "react-native";
@@ -80,7 +81,7 @@ export function WelcomeScreen({ navigation }: Props) {
           {/* Login Link */}
           <View style={styles.loginRow}>
             <Text style={styles.loginText}>Already have an account? </Text>
-            <Pressable hitSlop={10} onPress={() => console.log("Navigate to Login")}>
+            <Pressable hitSlop={10} onPress={() => navigation.navigate("RoleSelection")}>
               <Text style={styles.loginLink}>Sign In</Text>
             </Pressable>
           </View>

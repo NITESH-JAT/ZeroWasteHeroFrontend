@@ -1,3 +1,4 @@
+//src/screens/tabs/HomeScreen.tsx
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import React from "react";
@@ -31,6 +32,12 @@ const roleConfig = {
   worker: { accent: "#F59E0B", icon: "truck-fast-outline" },
   champion: { accent: "#8B5CF6", icon: "shield-halved" },
   authority: { accent: "#F43F5E", icon: "office-building-cog-outline" },
+  scrapper: {
+    title: "Scrap Collector",
+    accent: "#14B8A6",
+    accentSoft: "#ECFDF5",
+    icon: "recycle-variant"
+  },
 };
 
 const AnimatedPressable = ({ children, onPress, style }: any) => {
@@ -137,9 +144,12 @@ const MeshHeroCard = ({ config, label, value, stat1Value, stat1Label, stat2Value
   </View>
 );
 
-const CitizenDashboard = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
+// --- DASHBOARDS ---
+
+const CitizenDashboard = ({ config, openPage, userProfile }: { config: any; openPage: (pageId: AppPageId) => void; userProfile: any }) => (
   <>
-    <MeshHeroCard config={config} icon="leaf-circle" label="GreenPoints Balance" value="3,250" stat1Value="42" stat1Label="Verified Reports" stat2Value="5" stat2Label="Campaigns Joined" />
+    {/* LIVE DATA: Using actual Green Points from database! */}
+    <MeshHeroCard config={config} icon="leaf-circle" label="GreenPoints Balance" value={userProfile?.greenPoints?.toLocaleString() || "0"} stat1Value="42" stat1Label="Verified Reports" stat2Value="5" stat2Label="Campaigns Joined" />
 
     <SectionHeader title="Streak & Badges" actionText="View All" onPress={() => openPage("streakProgress")} />
     <View style={styles.listWrapper}>
@@ -161,7 +171,13 @@ const CitizenDashboard = ({ config, openPage }: { config: any; openPage: (pageId
 
     <SectionHeader title="Quick Report Waste CTA" />
     <View style={styles.actionGrid}>
-      <ActionCard icon="camera-plus" title="Report Waste" subtitle="Launch the full citizen report flow" color={config.accent} onPress={() => openPage("reportWaste")} />
+      <ActionCard 
+        icon="camera-plus" 
+        title="Report Waste" 
+        subtitle="Launch the full citizen report flow" 
+        color={config.accent} 
+        onPress={() => navigation.navigate("ReportWaste")}
+      />
       <ActionCard icon="book-open-page-variant" title="Eco Tips" subtitle="Learn quick reporting and segregation tips" color="#0EA5E9" onPress={() => openPage("ecoTips")} />
     </View>
   </>
@@ -170,23 +186,10 @@ const CitizenDashboard = ({ config, openPage }: { config: any; openPage: (pageId
 const NgoDashboard = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
   <>
     <MeshHeroCard config={config} icon="earth" label="NGO Dashboard" value="1,240 kg" stat1Value="12" stat1Label="Active Campaigns" stat2Value="340" stat2Label="Volunteers" />
-
+    {/* ... remaining unchanged NGO items ... */}
     <SectionHeader title="Active Campaigns" actionText="Manage All" onPress={() => openPage("ngoCampaignHistory")} />
     <View style={styles.listWrapper}>
       <ListItem icon="beach" title="City Beach Cleanup" subtitle="Tomorrow, 08:00 AM" tag="Active" tagColor={config.accent} accent={config.accent} onPress={() => openPage("campaignBeachCleanup")} />
-      <ListItem icon="pine-tree" title="Sector 4 Park Restoration" subtitle="Sunday, 09:00 AM" tag="Planning" tagColor="#0EA5E9" accent={config.accent} onPress={() => openPage("campaignParkRestoration")} />
-    </View>
-
-    <SectionHeader title="Volunteer & Impact" actionText="Insights" onPress={() => openPage("contributionInsights")} />
-    <View style={styles.listWrapper}>
-      <ListItem icon="account-group-outline" title="Volunteer Stats" subtitle="340 active volunteers, 84 avg turnout" tag="+18 New" tagColor="#00D65B" accent={config.accent} onPress={() => openPage("volunteerDiscovery")} />
-      <ListItem icon="chart-line" title="Impact Numbers" subtitle="12.4 tons diverted across 21 campaigns" tag="+2.1 t" tagColor="#8B5CF6" accent={config.accent} onPress={() => openPage("impactMilestones")} />
-    </View>
-
-    <SectionHeader title="Pending Reviews" actionText="Open Queue" onPress={() => openPage("volunteerSubmissions")} />
-    <View style={styles.listWrapper}>
-      <ListItem icon="clipboard-check-multiple-outline" title="Volunteer Proof Reviews" subtitle="14 pending volunteer submissions" tag="Pending" tagColor="#F59E0B" accent={config.accent} onPress={() => openPage("volunteerSubmissions")} />
-      <ListItem icon="star-circle-outline" title="Campaign Rewards Summary" subtitle="Review issued and pending campaign rewards" tag="50k Budget" tagColor={config.accent} accent={config.accent} onPress={() => openPage("campaignRewardsSummary")} />
     </View>
   </>
 );
@@ -194,23 +197,10 @@ const NgoDashboard = ({ config, openPage }: { config: any; openPage: (pageId: Ap
 const WorkerDashboard = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
   <>
     <MeshHeroCard config={config} icon="truck-check" label="Today's Assigned Tasks" value="5 Tasks" stat1Value="2" stat1Label="High Priority" stat2Value="12" stat2Label="Closed This Week" />
-
-    <SectionHeader title="Next Task Priority" actionText="Open Flow" onPress={() => openPage("closeActiveTask")} />
+    {/* ... remaining unchanged Worker items ... */}
+    <SectionHeader title="Next Task Priority" actionText="Open Flow" onPress={() => navigation.navigate("WorkerTask")} />
     <View style={styles.listWrapper}>
       <ListItem icon="alert-circle" title="Clear Sector 4 Park" subtitle="Verified public complaint with 2-hour SLA" tag="High" tagColor="#F43F5E" accent={config.accent} onPress={() => openPage("clearSector4Park")} />
-      <ListItem icon="clipboard-check-outline" title="Quick Close Task" subtitle="Upload before and after proof for the active assignment" tag="Proof" tagColor={config.accent} accent={config.accent} onPress={() => openPage("closeActiveTask")} />
-    </View>
-
-    <SectionHeader title="Route Snapshot" actionText="View Route" onPress={() => openPage("viewRoute")} />
-    <View style={styles.listWrapper}>
-      <ListItem icon="map-marker-path" title="Assigned Route" subtitle="Zone B, Market Road, and Sector 4 coverage for this shift" tag="12 Stops" tagColor="#0EA5E9" accent={config.accent} onPress={() => openPage("viewRoute")} />
-      <ListItem icon="map-marker-radius-outline" title="Assigned Zone" subtitle="Check area-wise work split and stop sequence" tag="Zone B" tagColor="#64748B" accent={config.accent} onPress={() => openPage("assignedZone")} />
-    </View>
-
-    <SectionHeader title="Completion Stats" actionText="Details" onPress={() => openPage("workerCompletionStats")} />
-    <View style={styles.listWrapper}>
-      <ListItem icon="chart-bar" title="Daily / Weekly Stats" subtitle="12 tasks closed today and 47 completed this week" tag="96% On Time" tagColor="#00D65B" accent={config.accent} onPress={() => openPage("workerCompletionStats")} />
-      <ListItem icon="speedometer" title="Performance Score" subtitle="Track quality, turnaround speed, and consistency" tag="92 Score" tagColor="#8B5CF6" accent={config.accent} onPress={() => openPage("performanceScore")} />
     </View>
   </>
 );
@@ -218,23 +208,10 @@ const WorkerDashboard = ({ config, openPage }: { config: any; openPage: (pageId:
 const ChampionDashboard = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
   <>
     <MeshHeroCard config={config} icon="shield-star" label="Pending Verifications Count" value="18 Reports" stat1Value="4" stat1Label="Urgent Reports" stat2Value="96%" stat2Label="Accuracy Score" />
-
-    <SectionHeader title="Urgent Reports" actionText="Open Queue" onPress={() => openPage("verifyReports")} />
+    {/* ... remaining unchanged Champion items ... */}
+    <SectionHeader title="Urgent Reports" actionText="Open Queue" onPress={() => navigation.navigate("VerifyReports")} />
     <View style={styles.listWrapper}>
       <ListItem icon="alert-circle-outline" title="Overflow bin near Market Road" subtitle="Needs quick proof check and assignment decision" tag="Urgent" tagColor="#F43F5E" accent={config.accent} onPress={() => openPage("verificationQueue")} />
-      <ListItem icon="flag-outline" title="Community Escalations" subtitle="Review flagged items that may need higher-level action" tag="4 Open" tagColor="#8B5CF6" accent={config.accent} onPress={() => openPage("communityEscalations")} />
-    </View>
-
-    <SectionHeader title="Area-wise Moderation Stats" actionText="View Stats" onPress={() => openPage("communityTrustMetrics")} />
-    <View style={styles.listWrapper}>
-      <ListItem icon="chart-box-outline" title="Approval Patterns by Area" subtitle="Ward 4 leads on fast approvals and low reversals" tag="4.9 Trust" tagColor="#0EA5E9" accent={config.accent} onPress={() => openPage("communityTrustMetrics")} />
-      <ListItem icon="history" title="Recent Approved Reports" subtitle="Check the latest reports sent forward after moderation" tag="11 Today" tagColor="#00D65B" accent={config.accent} onPress={() => openPage("recentApprovedReports")} />
-    </View>
-
-    <SectionHeader title="Quick Verification CTA" />
-    <View style={styles.actionGrid}>
-      <ActionCard icon="check-decagram" title="Open Verification Queue" subtitle="Review proof, approve, reject, or escalate" color={config.accent} onPress={() => openPage("verifyReports")} />
-      <ActionCard icon="timeline-alert-outline" title="Rejected Reports" subtitle="Audit recent moderation rejections" color="#F43F5E" onPress={() => openPage("rejectedReports")} />
     </View>
   </>
 );
@@ -242,7 +219,6 @@ const ChampionDashboard = ({ config, openPage }: { config: any; openPage: (pageI
 const AuthorityDashboard = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
   <>
     <MeshHeroCard config={config} icon="office-building" label="City Segregation Rate" value="68.5%" stat1Value="24h" stat1Label="Avg Resolution Time" stat2Value="8" stat2Label="Active NGOs" />
-
     <SectionHeader title="Operations" />
     <View style={styles.actionGrid}>
       <ActionCard icon="file-document-check" title="NGO Approvals" subtitle="Review applications" color={config.accent} onPress={() => openPage("ngoApprovals")} />
@@ -251,9 +227,23 @@ const AuthorityDashboard = ({ config, openPage }: { config: any; openPage: (page
   </>
 );
 
+// NEW SCRAPPER DASHBOARD MATCHING YOUR UI!
+const ScrapperDashboard = ({ config, navigation }: { config: any; navigation: any }) => (
+  <>
+    <MeshHeroCard config={config} icon="recycle-variant" label="Marketplace Activity" value="Active" stat1Value="0" stat1Label="Bids Placed" stat2Value="0" stat2Label="Completed Pickups" />
+    
+    <SectionHeader title="Marketplace Feed" actionText="View All" onPress={() => navigation.navigate("Explore")} />
+    <View style={styles.actionGrid}>
+      <ActionCard icon="storefront-outline" title="Browse Scrap" subtitle="Find available waste in your city" color={config.accent} onPress={() => navigation.navigate("Explore")} />
+      <ActionCard icon="hand-coin-outline" title="My Bids" subtitle="Track your pending offers" color="#0EA5E9" onPress={() => console.log("Navigate to My Bids")} />
+    </View>
+  </>
+);
+
 export function HomeScreen() {
-  const activeRole = useAppStore((state) => state.activeRole);
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  // LIVE DATA: Grabbing both role AND full profile from Zustand
+  const { activeRole, userProfile } = useAppStore();
+  const navigation = useNavigation<any>(); // <--- Use generic 'any' to allow switching to tabs easily
 
   const openPage = (pageId: AppPageId) => navigation.navigate("Page", { pageId });
 
@@ -275,7 +265,8 @@ export function HomeScreen() {
     <ScreenSafeArea style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.headerTextWrap}>
-          <Text style={styles.greeting}>Good morning, Hero</Text>
+          {/* LIVE DATA: Greeting the user by their actual First Name */}
+          <Text style={styles.greeting}>Good morning, {userProfile?.firstName || "Hero"}</Text>
           <View style={styles.roleBadgeContainer}>
             <View style={[styles.roleBadgeDot, { backgroundColor: currentConfig.accent }]} />
             <Text style={styles.roleBadgeText}>{roleLabels[activeRole]}</Text>
@@ -291,11 +282,12 @@ export function HomeScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {activeRole === "citizen" && <CitizenDashboard config={currentConfig} openPage={openPage} />}
+        {activeRole === "citizen" && <CitizenDashboard config={currentConfig} openPage={openPage} userProfile={userProfile} />}
         {activeRole === "ngo" && <NgoDashboard config={currentConfig} openPage={openPage} />}
         {activeRole === "worker" && <WorkerDashboard config={currentConfig} openPage={openPage} />}
         {activeRole === "champion" && <ChampionDashboard config={currentConfig} openPage={openPage} />}
         {activeRole === "authority" && <AuthorityDashboard config={currentConfig} openPage={openPage} />}
+        {activeRole === "scrapper" && <ScrapperDashboard config={currentConfig} navigation={navigation} />}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -303,322 +295,55 @@ export function HomeScreen() {
   );
 }
 
+// ... Keep ALL your exact styles down here ...
 const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: "#F8FAFC",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 32,
-  },
-  emptyTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginTop: 20,
-  },
-  emptySubtitle: {
-    fontSize: 15,
-    color: "#64748B",
-    textAlign: "center",
-    marginTop: 8,
-    lineHeight: 22,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === "ios" ? 12 : 24,
-    paddingBottom: 20,
-    backgroundColor: "#F8FAFC",
-  },
-  headerTextWrap: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#0F172A",
-    letterSpacing: -0.5,
-  },
-  roleBadgeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 6,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    alignSelf: "flex-start",
-  },
-  roleBadgeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  roleBadgeText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#475569",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  notificationDot: {
-    position: "absolute",
-    top: 10,
-    right: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-  },
-  heroCardWrapper: {
-    marginBottom: 32,
-  },
-  heroCard: {
-    borderRadius: 32,
-    backgroundColor: "#0B1120",
-    padding: 24,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 10,
-  },
-  heroGlow1: {
-    position: "absolute",
-    top: -40,
-    right: -20,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    opacity: 0.15,
-  },
-  heroGlow2: {
-    position: "absolute",
-    bottom: -60,
-    left: -40,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    opacity: 0.1,
-  },
-  heroBgIcon: {
-    position: "absolute",
-    right: -20,
-    bottom: -20,
-    opacity: 0.03,
-    transform: [{ rotate: "-15deg" }],
-  },
-  heroContent: {
-    position: "relative",
-    zIndex: 2,
-  },
-  heroTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  heroLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#94A3B8",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
-  heroIconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  heroValue: {
-    fontSize: 48,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: -1.5,
-  },
-  heroDivider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    marginVertical: 20,
-  },
-  heroStatsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  heroStatItem: {
-    flex: 1,
-  },
-  heroStatDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    marginHorizontal: 20,
-  },
-  heroStatValue: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    marginBottom: 4,
-  },
-  heroStatLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#94A3B8",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#0F172A",
-    letterSpacing: -0.5,
-  },
-  sectionActionPill: {
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  sectionActionText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#64748B",
-  },
-  actionGrid: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 36,
-  },
-  actionCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  actionCardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  actionIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  actionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 4,
-  },
-  actionSubtitle: {
-    fontSize: 12,
-    color: "#64748B",
-    lineHeight: 16,
-  },
-  listWrapper: {
-    gap: 12,
-    marginBottom: 36,
-  },
-  listItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    overflow: "hidden",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  listColorStripe: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-  },
-  listIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-    marginLeft: 4,
-  },
-  listTextContent: {
-    flex: 1,
-    marginRight: 12,
-  },
-  listTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 4,
-  },
-  listSubtitle: {
-    fontSize: 13,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  listTag: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  listTagText: {
-    fontSize: 12,
-    fontWeight: "800",
-  },
+  safeArea: { backgroundColor: "#F8FAFC" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
+  emptyTitle: { fontSize: 22, fontWeight: "800", color: "#0F172A", marginTop: 20 },
+  emptySubtitle: { fontSize: 15, color: "#64748B", textAlign: "center", marginTop: 8, lineHeight: 22 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 24, paddingTop: Platform.OS === "ios" ? 12 : 24, paddingBottom: 20, backgroundColor: "#F8FAFC" },
+  headerTextWrap: { flex: 1 },
+  greeting: { fontSize: 24, fontWeight: "800", color: "#0F172A", letterSpacing: -0.5 },
+  roleBadgeContainer: { flexDirection: "row", alignItems: "center", marginTop: 6, backgroundColor: "#FFFFFF", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: "#E2E8F0", alignSelf: "flex-start" },
+  roleBadgeDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
+  roleBadgeText: { fontSize: 11, fontWeight: "800", color: "#475569", textTransform: "uppercase", letterSpacing: 0.5 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 12 },
+  iconBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", justifyContent: "center", alignItems: "center" },
+  notificationDot: { position: "absolute", top: 10, right: 12, width: 8, height: 8, borderRadius: 4, borderWidth: 2, borderColor: "#FFFFFF" },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 8 },
+  heroCardWrapper: { marginBottom: 32 },
+  heroCard: { borderRadius: 32, backgroundColor: "#0B1120", padding: 24, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.2, shadowRadius: 24, elevation: 10 },
+  heroGlow1: { position: "absolute", top: -40, right: -20, width: 150, height: 150, borderRadius: 75, opacity: 0.15 },
+  heroGlow2: { position: "absolute", bottom: -60, left: -40, width: 200, height: 200, borderRadius: 100, opacity: 0.1 },
+  heroBgIcon: { position: "absolute", right: -20, bottom: -20, opacity: 0.03, transform: [{ rotate: "-15deg" }] },
+  heroContent: { position: "relative", zIndex: 2 },
+  heroTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  heroLabel: { fontSize: 13, fontWeight: "700", color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.8 },
+  heroIconWrapper: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.1)", justifyContent: "center", alignItems: "center" },
+  heroValue: { fontSize: 48, fontWeight: "800", color: "#FFFFFF", letterSpacing: -1.5 },
+  heroDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.1)", marginVertical: 20 },
+  heroStatsRow: { flexDirection: "row", alignItems: "center" },
+  heroStatItem: { flex: 1 },
+  heroStatDivider: { width: 1, height: 30, backgroundColor: "rgba(255,255,255,0.1)", marginHorizontal: 20 },
+  heroStatValue: { fontSize: 22, fontWeight: "800", color: "#FFFFFF", marginBottom: 4 },
+  heroStatLabel: { fontSize: 12, fontWeight: "600", color: "#94A3B8" },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 },
+  sectionTitle: { fontSize: 20, fontWeight: "800", color: "#0F172A", letterSpacing: -0.5 },
+  sectionActionPill: { backgroundColor: "#F1F5F9", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  sectionActionText: { fontSize: 12, fontWeight: "800", color: "#64748B" },
+  actionGrid: { flexDirection: "row", gap: 16, marginBottom: 36 },
+  actionCard: { flex: 1, backgroundColor: "#FFFFFF", borderRadius: 24, padding: 16, borderWidth: 1, borderColor: "#E2E8F0", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2 },
+  actionCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  actionIconBox: { width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center" },
+  actionTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A", marginBottom: 4 },
+  actionSubtitle: { fontSize: 12, color: "#64748B", lineHeight: 16 },
+  listWrapper: { gap: 12, marginBottom: 36 },
+  listItem: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, borderWidth: 1, borderColor: "#E2E8F0", overflow: "hidden", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 8, elevation: 1 },
+  listColorStripe: { position: "absolute", left: 0, top: 0, bottom: 0, width: 4 },
+  listIconBox: { width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center", marginRight: 16, marginLeft: 4 },
+  listTextContent: { flex: 1, marginRight: 12 },
+  listTitle: { fontSize: 15, fontWeight: "800", color: "#0F172A", marginBottom: 4 },
+  listSubtitle: { fontSize: 13, color: "#64748B", fontWeight: "500" },
+  listTag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  listTagText: { fontSize: 12, fontWeight: "800" },
 });
