@@ -12,6 +12,8 @@ import { ScrapDetailsScreen } from "../screens/scrapper/ScrapDetailsScreen";
 import { ReportWasteScreen } from "../screens/citizen/ReportWasteScreen";
 import { VerifyReportsScreen } from "../screens/champion/VerifyReportsScreen";
 import { WorkerTaskScreen } from "../screens/worker/WorkerTaskScreen";
+import { ScrapFeedScreen } from "../screens/scrapper/ScrapFeedScreen";
+import { CitizenHistoryScreen } from "../screens/citizen/CitizenHistoryScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -60,6 +62,14 @@ export function RootNavigator() {
           <Stack.Screen 
             name="WorkerTask" 
             component={WorkerTaskScreen} 
+          />
+          <Stack.Screen 
+            name="ScrapFeed" 
+            component={ScrapFeedScreen}
+          />
+          <Stack.Screen 
+            name="CitizenHistory" 
+            component={CitizenHistoryScreen}
           />
         </>
       )}

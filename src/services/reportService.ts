@@ -1,9 +1,6 @@
 import { apiClient } from "../api/client";
 
 export const reportService = {
-  /**
-   * CITIZEN: Submit a new waste report
-   */
   submitReport: async (
     category: string,
     description: string,
@@ -16,11 +13,9 @@ export const reportService = {
       formData.append("category", category);
       formData.append("description", description);
       
-      // Sending coordinates as strings so they safely pass through form-data
       formData.append("latitude", latitude.toString());
       formData.append("longitude", longitude.toString());
 
-      // Format the image for upload
       const filename = imageUri.split('/').pop() || 'report.jpg';
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : `image/jpeg`;
@@ -33,6 +28,16 @@ export const reportService = {
       return response.data.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || "Failed to submit report");
+    }
+  },
+
+  // --- NEW: Fetch ONLY the logged-in Citizen's reports ---
+  getMyReports: async () => {
+    try {
+      const response = await apiClient.get("/reports/my-reports");
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || "Failed to fetch your reports");
     }
   },
 };

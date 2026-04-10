@@ -66,11 +66,29 @@ const CitizenActions = ({ openPage, navigation }: any) => (
       subtitle="Snap a photo & geo-tag to earn points" 
       icon="camera" 
       accent="#00D65B" 
-      onPress={() => navigation.navigate("ReportWaste")} // Direct stack navigation
+      onPress={() => navigation.navigate("ReportWaste")}
+    />
+    <PrimaryActionCard 
+      title="Sell Scrap" 
+      subtitle="List recyclables on the marketplace" 
+      icon="recycle" 
+      accent="#14B8A6" 
+      onPress={() => navigation.navigate("PostScrap")}
     />
     <View style={styles.secondaryGrid}>
-      <SecondaryActionCard title="AR Waste Hunt" icon="view-grid-plus" color="#00D65B" onPress={() => openPage("arWasteHunt")} />
-      <SecondaryActionCard title="Join Campaign" icon="account-group" color="#0F172A" onPress={() => openPage("joinCampaign")} />
+      {/* FIXED: Pointing to the real History screen tabs */}
+      <SecondaryActionCard 
+        title="My Reports" 
+        icon="file-document-outline" 
+        color="#00D65B" 
+        onPress={() => navigation.navigate("CitizenHistory", { initialTab: 'reports' })} 
+      />
+      <SecondaryActionCard 
+        title="My Listings" 
+        icon="storefront-outline" 
+        color="#14B8A6" 
+        onPress={() => navigation.navigate("CitizenHistory", { initialTab: 'listings' })} 
+      />
     </View>
   </View>
 );

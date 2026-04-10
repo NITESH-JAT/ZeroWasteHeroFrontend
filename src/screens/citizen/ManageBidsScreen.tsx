@@ -1,3 +1,4 @@
+//src/screens/citizen/ManageBidsScreen.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";

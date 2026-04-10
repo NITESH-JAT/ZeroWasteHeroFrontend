@@ -14,6 +14,8 @@ export type RootStackParamList = {
   ReportWaste: undefined;
   VerifyReports: undefined;
   WorkerTask: undefined;
+  ScrapFeed: undefined;
+  CitizenHistory: { initialTab: 'reports' | 'listings' };
 };
 
 export type MainTabParamList = {

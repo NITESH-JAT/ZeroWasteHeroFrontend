@@ -4,7 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
-import { Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenSafeArea } from "../../components/ui/ScreenSafeArea";
 import type { AppPageId } from "../../navigation/pageRegistry";
 import type { RootStackParamList } from "../../navigation/types";
@@ -151,7 +151,7 @@ const CitizenRewards = ({ config, openPage, userProfile }: any) => (
       config={config} 
       balance={userProfile?.greenPoints?.toLocaleString() || "0"} 
       subtext="Redeem points for real-world rewards" 
-      onHistoryPress={() => openPage("rewardHistory")} 
+      onHistoryPress={() => Alert.alert("History", "No transactions yet. Complete tasks to earn points!")}
     />
 
     <SectionHeader title="My Badges" />

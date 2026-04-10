@@ -1,142 +1,93 @@
-//src/screens/details/VerifyQueueScreen.tsx (Should be ExploreScreen.tsx based on your content)
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useState } from "react";
-import { Dimensions, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import * as Location from "expo-location";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Dimensions, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { ScreenSafeArea } from "../../components/ui/ScreenSafeArea";
-import type { RootStackParamList } from "../../navigation/types";
 import { useAppStore } from "../../store/useAppStore";
+import { campaignService } from "../../services/campaignService";
+import { userService } from "../../services/userService";
 
 const { width } = Dimensions.get("window");
 
-const CITIZEN_TABS = ["Campaigns", "Map View", "Leaderboard"];
+// Role-Specific Tabs
+const CITIZEN_TABS = ["Campaigns", "Leaderboard"]; 
 const NGO_TABS = ["Community Feed", "Partner NGOs", "Analytics"];
 const WORKER_TABS = ["Task List", "Assigned Work", "Task Status"];
 const CHAMPION_TABS = ["Queue", "Approved", "Escalations"];
-// ADDED SCRAPPER TABS
-const SCRAPPER_TABS = ["Market Feed", "Pricing Guide"]; 
-
-const CAMPAIGNS = [
-  {
-    id: "1",
-    title: "City Beach Cleanup Drive",
-    ngo: "EarthWarriors Foundation",
-    date: "Sat, 24 Oct • 08:00 AM",
-    distance: "2.5 km away",
-    points: 500,
-    image: "https://images.unsplash.com/photo-1618477461853-cf6ed80fca73?auto=format&fit=crop&q=80&w=800",
-    tags: ["High Priority", "Plastic Waste"],
-  },
-  {
-    id: "2",
-    title: "Sector 4 Park Restoration",
-    ngo: "GreenFuture India",
-    date: "Sun, 25 Oct • 09:00 AM",
-    distance: "5.0 km away",
-    points: 300,
-    image: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=800",
-    tags: ["Community", "Planting"],
-  },
-];
-
-function CampaignCard({ campaign, onOpen }: any) {
-  const [isButtonPressed, setIsButtonPressed] = useState(false);
-
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.campaignCard, pressed && !isButtonPressed && styles.cardPressed]}
-      onPress={onOpen}
-    >
-      <View style={styles.cardImageContainer}>
-        <Image source={{ uri: campaign.image }} style={styles.cardImage} />
-        <View style={styles.cardOverlay} />
-
-        <View style={styles.badgeTopLeft}>
-          <MaterialCommunityIcons name="map-marker-distance" size={14} color="#0F172A" />
-          <Text style={styles.badgeTextDark}>{campaign.distance}</Text>
-        </View>
-        <View style={styles.badgeTopRight}>
-          <MaterialCommunityIcons name="star-shooting" size={14} color="#FFFFFF" />
-          <Text style={styles.badgeTextLight}>{campaign.points} Pts</Text>
-        </View>
-      </View>
-
-      <View style={styles.cardBody}>
-        <View style={styles.tagsRow}>
-          {campaign.tags.map((tag: string) => (
-            <View key={tag} style={styles.tagPill}>
-              <Text style={styles.tagText}>{tag}</Text>
-            </View>
-          ))}
-        </View>
-
-        <Text style={styles.campaignTitle}>{campaign.title}</Text>
-
-        <View style={styles.ngoRow}>
-          <MaterialCommunityIcons name="shield-check" size={16} color="#00E676" />
-          <Text style={styles.ngoName}>{campaign.ngo}</Text>
-        </View>
-
-        <View style={styles.cardFooter}>
-          <View style={styles.dateRow}>
-            <Feather name="calendar" size={16} color="#64748B" />
-            <Text style={styles.dateText}>{campaign.date}</Text>
-          </View>
-
-          <Pressable
-            style={({ pressed }) => [styles.joinBtn, pressed && styles.joinBtnPressed]}
-            onPressIn={() => setIsButtonPressed(true)}
-            onPressOut={() => setIsButtonPressed(false)}
-            onPress={(event) => {
-              event.stopPropagation();
-              onOpen();
-            }}
-          >
-            <Text style={styles.joinBtnText}>View Details</Text>
-          </Pressable>
-        </View>
-      </View>
-    </Pressable>
-  );
-}
+const SCRAPPER_TABS = ["Market Feed", "Pricing Guide"];
 
 export function ExploreScreen() {
   const activeRole = useAppStore((state) => state.activeRole);
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // States for Citizen Live Data
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [locationStatus, setLocationStatus] = useState("Fetching location...");
+  
   const navigation = useNavigation<any>();
 
-  // Determine which tabs to show based on role
+  // Determine which tabs to show based on the logged-in role
   const currentTabs = activeRole === "ngo" ? NGO_TABS :
                       activeRole === "worker" ? WORKER_TABS :
                       activeRole === "champion" ? CHAMPION_TABS :
                       activeRole === "scrapper" ? SCRAPPER_TABS : 
                       CITIZEN_TABS;
 
+  // Only fetch Citizen data if the user is actually a Citizen!
+  useEffect(() => {
+    const fetchData = async () => {
+      if (activeRole !== "citizen") return; 
+
+      setIsLoading(true);
+      if (activeTab === 0) {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== "granted") {
+            setLocationStatus("Location denied. Showing recent campaigns.");
+            const data = await campaignService.getCampaigns(); 
+            setCampaigns(data);
+          } else {
+            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            const data = await campaignService.getCampaigns(location.coords.latitude, location.coords.longitude);
+            setCampaigns(data);
+            setLocationStatus("Showing campaigns near you");
+          }
+        } catch (error) {
+          setLocationStatus("GPS error. Showing recent campaigns.");
+          const data = await campaignService.getCampaigns();
+          setCampaigns(data);
+        }
+      } else if (activeTab === 1) {
+        const data = await userService.getLeaderboard();
+        setLeaderboard(data);
+      }
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, [activeTab, activeRole]);
+
   return (
     <ScreenSafeArea style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>Explore</Text>
+          <Text style={styles.headerTitle}>{activeRole === "scrapper" ? "Marketplace" : "Explore"}</Text>
 
           <View style={styles.searchRow}>
             <View style={styles.searchBar}>
               <Feather name="search" size={20} color="#94A3B8" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Find campaigns, NGOs, or areas..."
+                placeholder="Search..."
                 placeholderTextColor="#94A3B8"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
             </View>
-            <Pressable
-              style={({ pressed }) => [styles.filterBtn, pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }]}
-              onPress={() => navigation.navigate("Page", { pageId: "filterCampaigns" })}
-            >
-              <Feather name="sliders" size={20} color="#0F172A" />
-            </Pressable>
           </View>
 
           <View style={styles.tabContainer}>
@@ -153,7 +104,7 @@ export function ExploreScreen() {
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
-          {/* SCRAPPER EXPLORE TABS */}
+          {/* --- SCRAPPER VIEW --- */}
           {activeRole === "scrapper" ? (
             <>
               {activeTab === 0 && (
@@ -162,7 +113,7 @@ export function ExploreScreen() {
                     <Text style={styles.sectionTitle}>Marketplace Feed</Text>
                     <Text style={styles.sectionSubtitle}>Browse available waste near you</Text>
                   </View>
-                  <Pressable style={({ pressed }) => [styles.tipCard, pressed && styles.cardPressed]} onPress={() => navigation.navigate("Marketplace")}>
+                  <Pressable style={({ pressed }) => [styles.tipCard, pressed && styles.cardPressed]} onPress={() => navigation.navigate("ScrapFeed")}>
                     <View style={[styles.tipIconWrap, { backgroundColor: '#CCFBF1' }]}>
                       <MaterialCommunityIcons name="storefront-outline" size={28} color="#0F766E" />
                     </View>
@@ -193,22 +144,24 @@ export function ExploreScreen() {
                 </View>
               )}
             </>
+
+          /* --- NGO VIEW --- */
           ) : activeRole === "ngo" ? (
             <>
-              {/* ... NGO TABS REMAIN EXACTLY THE SAME ... */}
               {activeTab === 0 && (
                 <View>
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Community Feed</Text>
                     <Text style={styles.sectionSubtitle}>Campaign updates and volunteer activity</Text>
                   </View>
-                  <CampaignCard campaign={CAMPAIGNS[0]} onOpen={() => navigation.navigate("Page", { pageId: "ngoCommunityFeed" })} />
+                  <Text style={{color: "#64748B", textAlign: "center", marginTop: 20}}>NGO features coming soon.</Text>
                 </View>
               )}
             </>
+
+          /* --- WORKER VIEW --- */
           ) : activeRole === "worker" ? (
             <>
-              {/* ... WORKER TABS REMAIN EXACTLY THE SAME ... */}
               {activeTab === 0 && (
                 <View>
                   <View style={styles.sectionHeader}>
@@ -228,9 +181,10 @@ export function ExploreScreen() {
                 </View>
               )}
             </>
+
+          /* --- CHAMPION VIEW --- */
           ) : activeRole === "champion" ? (
             <>
-              {/* ... CHAMPION TABS REMAIN EXACTLY THE SAME ... */}
               {activeTab === 0 && (
                 <View>
                   <View style={styles.sectionHeader}>
@@ -250,33 +204,66 @@ export function ExploreScreen() {
                 </View>
               )}
             </>
+
+          /* --- CITIZEN VIEW (Default) --- */
           ) : (
             <>
-              {/* ... CITIZEN TABS REMAIN EXACTLY THE SAME ... */}
               {activeTab === 0 && (
                 <View>
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Nearby Drives</Text>
-                    <Text style={styles.sectionSubtitle}>Based on your location</Text>
+                    <Text style={styles.sectionSubtitle}>{locationStatus}</Text>
                   </View>
-                  {CAMPAIGNS.map((campaign) => (
-                    <CampaignCard
-                      key={campaign.id}
-                      campaign={campaign}
-                      onOpen={() => navigation.navigate("Page", { pageId: campaign.id === "1" ? "campaignBeachCleanup" : "campaignParkRestoration" })}
-                    />
-                  ))}
+
+                  {isLoading ? (
+                    <ActivityIndicator color="#00D65B" style={{ marginTop: 40 }} />
+                  ) : campaigns.length === 0 ? (
+                    <Text style={{ textAlign: 'center', color: '#64748B', marginTop: 20 }}>No active campaigns found near you.</Text>
+                  ) : (
+                    campaigns.map((campaign) => (
+                      <View key={campaign.id} style={styles.campaignCard}>
+                        <Image source={{ uri: campaign.image }} style={styles.cardImage} />
+                        <View style={styles.cardBody}>
+                          <Text style={styles.campaignTitle}>{campaign.title}</Text>
+                          <Text style={styles.dateText}>{campaign.date}</Text>
+                          <Text style={styles.distanceText}>{campaign.distanceKm ? `${campaign.distanceKm} km away` : 'Location available'}</Text>
+                        </View>
+                      </View>
+                    ))
+                  )}
                 </View>
               )}
-              {activeTab === 2 && (
-                <Pressable style={({ pressed }) => [styles.leaderboardPlaceholder, pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] }]} onPress={() => navigation.navigate("Page", { pageId: "cityLeaderboard" })}>
-                  <MaterialCommunityIcons name="trophy-award" size={64} color="#F59E0B" />
-                  <Text style={styles.mapTitle}>City Leaderboards</Text>
-                  <Text style={styles.mapSubtitle}>See who's leading the GreenPoints charts in your ward.</Text>
-                </Pressable>
+
+              {activeTab === 1 && (
+                <View>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>City Champions</Text>
+                    <Text style={styles.sectionSubtitle}>Top 100 Eco-Warriors</Text>
+                  </View>
+                  {isLoading ? (
+                    <ActivityIndicator color="#F59E0B" style={{ marginTop: 40 }} />
+                  ) : (
+                    leaderboard.map((user, index) => {
+                      const isTop3 = index < 3;
+                      const rankColor = index === 0 ? "#F59E0B" : index === 1 ? "#94A3B8" : index === 2 ? "#D97706" : "#F8FAFC";
+                      return (
+                        <View key={user.id} style={[styles.leaderboardRow, isTop3 && styles.top3Row, isTop3 && { borderColor: rankColor }]}>
+                          <View style={[styles.rankCircle, { backgroundColor: isTop3 ? rankColor : "#F1F5F9" }]}>
+                            <Text style={[styles.rankText, isTop3 && { color: "#FFF" }]}>{index + 1}</Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.lbName}>{user.firstName} {user.lastName}</Text>
+                          </View>
+                          <Text style={styles.lbPoints}>{user.greenPoints} Pts</Text>
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
               )}
             </>
-          )}          
+          )}
+
           <View style={{ height: 120 }} />
         </ScrollView>
       </View>
@@ -284,9 +271,8 @@ export function ExploreScreen() {
   );
 }
 
-// ... KEEP ALL YOUR EXISTING STYLES (They are perfect!) ...
 const styles = StyleSheet.create({
-  safeArea: { backgroundColor: "#F8FAFC" },
+  safeArea: { backgroundColor: "#F8FAFC", flex: 1 },
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   headerContainer: { paddingHorizontal: 24, paddingTop: Platform.OS === "ios" ? 12 : 24, paddingBottom: 16, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#F1F5F9", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, zIndex: 10 },
   headerTitle: { fontSize: 34, fontWeight: "800", color: "#0F172A", letterSpacing: -1, marginBottom: 20 },
@@ -294,7 +280,6 @@ const styles = StyleSheet.create({
   searchBar: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#F8FAFC", borderRadius: 16, paddingHorizontal: 16, height: 52, borderWidth: 1, borderColor: "#E2E8F0" },
   searchIcon: { marginRight: 10 },
   searchInput: { flex: 1, fontSize: 15, fontWeight: "500", color: "#0F172A" },
-  filterBtn: { width: 52, height: 52, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", justifyContent: "center", alignItems: "center", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   tabContainer: { flexDirection: "row", backgroundColor: "#F1F5F9", padding: 4, borderRadius: 14 },
   tabButton: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 10 },
   tabButtonActive: { backgroundColor: "#FFFFFF", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
@@ -304,37 +289,26 @@ const styles = StyleSheet.create({
   sectionHeader: { marginBottom: 16 },
   sectionTitle: { fontSize: 20, fontWeight: "800", color: "#0F172A", letterSpacing: -0.5 },
   sectionSubtitle: { fontSize: 14, color: "#64748B", fontWeight: "500", marginTop: 2 },
-  campaignCard: { backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "#E2E8F0", marginBottom: 20, overflow: "hidden", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.04, shadowRadius: 16, elevation: 4 },
-  cardPressed: { transform: [{ scale: 0.98 }] },
-  cardImageContainer: { width: "100%", height: 180, position: "relative", backgroundColor: "#E2E8F0" },
-  cardImage: { width: "100%", height: "100%", resizeMode: "cover" },
-  cardOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(15, 23, 42, 0.15)" },
-  badgeTopLeft: { position: "absolute", top: 16, left: 16, flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, gap: 4 },
-  badgeTextDark: { fontSize: 12, fontWeight: "800", color: "#0F172A" },
-  badgeTopRight: { position: "absolute", top: 16, right: 16, flexDirection: "row", alignItems: "center", backgroundColor: "#00E676", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, gap: 4, shadowColor: "#00D65B", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
-  badgeTextLight: { fontSize: 12, fontWeight: "800", color: "#FFFFFF" },
+  
+  // Custom styles for this screen
+  campaignCard: { backgroundColor: "#FFF", borderRadius: 24, overflow: "hidden", marginBottom: 20, borderWidth: 1, borderColor: "#E2E8F0" },
+  cardImage: { width: "100%", height: 160, backgroundColor: "#E2E8F0" },
   cardBody: { padding: 20 },
-  tagsRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  tagPill: { backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  tagText: { fontSize: 11, fontWeight: "700", color: "#475569", textTransform: "uppercase" },
-  campaignTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A", marginBottom: 6, letterSpacing: -0.3 },
-  ngoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 20 },
-  ngoName: { fontSize: 14, fontWeight: "600", color: "#64748B" },
-  cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#F1F5F9", paddingTop: 16 },
-  dateRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, marginRight: 12 },
-  dateText: { fontSize: 13, fontWeight: "600", color: "#475569" },
-  joinBtn: { backgroundColor: "#0F172A", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
-  joinBtnPressed: { opacity: 0.88, transform: [{ scale: 0.96 }] },
-  joinBtnText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
-  mapPlaceholder: { backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "#E2E8F0", padding: 40, alignItems: "center", justifyContent: "center", marginTop: 20 },
-  leaderboardPlaceholder: { backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "#E2E8F0", padding: 40, alignItems: "center", justifyContent: "center", marginTop: 20 },
-  mapTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A", marginTop: 16, marginBottom: 8 },
-  mapSubtitle: { fontSize: 14, color: "#64748B", textAlign: "center", lineHeight: 20, marginBottom: 24 },
+  campaignTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A", marginBottom: 8 },
+  dateText: { fontSize: 14, color: "#64748B", marginBottom: 4 },
+  distanceText: { fontSize: 14, fontWeight: "700", color: "#00D65B" },
+  
+  leaderboardRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", padding: 16, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: "#E2E8F0" },
+  top3Row: { borderWidth: 2, shadowColor: "#F59E0B", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+  rankCircle: { width: 36, height: 36, borderRadius: 18, justifyContent: "center", alignItems: "center", marginRight: 16 },
+  rankText: { fontSize: 14, fontWeight: "800", color: "#0F172A" },
+  lbName: { fontSize: 16, fontWeight: "700", color: "#0F172A" },
+  lbPoints: { fontSize: 16, fontWeight: "800", color: "#00D65B" },
+
   tipCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: "#E2E8F0", padding: 18, marginBottom: 8, shadowColor: "#0F172A", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
   tipIconWrap: { width: 56, height: 56, borderRadius: 18, backgroundColor: "#ECFDF5", justifyContent: "center", alignItems: "center", marginRight: 14 },
   tipTextWrap: { flex: 1, marginRight: 12 },
   tipTitle: { fontSize: 15, fontWeight: "800", color: "#0F172A", marginBottom: 4 },
   tipSubtitle: { fontSize: 13, lineHeight: 19, color: "#64748B" },
-  mapActionBtn: { backgroundColor: "#0F172A", paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14 },
-  mapActionText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  cardPressed: { transform: [{ scale: 0.98 }] },
 });

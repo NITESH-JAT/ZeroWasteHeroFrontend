@@ -1,8 +1,9 @@
 //src/screens/tabs/HomeScreen.tsx
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Dimensions,
   Platform,
   Pressable,
@@ -22,6 +23,7 @@ import type { AppPageId } from "../../navigation/pageRegistry";
 import type { RootStackParamList } from "../../navigation/types";
 import { useAppStore } from "../../store/useAppStore";
 import * as Haptics from "expo-haptics";
+import { userService } from "../../services/userService";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 const { width } = Dimensions.get("window");
@@ -84,8 +86,8 @@ const ActionCard = ({ icon, title, subtitle, color, onPress }: any) => (
       </View>
       <MaterialCommunityIcons name="arrow-top-right" size={20} color="#CBD5E1" />
     </View>
-    <Text style={styles.actionTitle}>{title}</Text>
-    <Text style={styles.actionSubtitle}>{subtitle}</Text>
+    <Text style={styles.actionTitle} numberOfLines={1}>{title}</Text>
+    <Text style={styles.actionSubtitle} numberOfLines={2}>{subtitle}</Text>
   </AnimatedPressable>
 );
 
@@ -146,42 +148,41 @@ const MeshHeroCard = ({ config, label, value, stat1Value, stat1Label, stat2Value
 
 // --- DASHBOARDS ---
 
-const CitizenDashboard = ({ config, openPage, userProfile }: { config: any; openPage: (pageId: AppPageId) => void; userProfile: any }) => (
-  <>
-    {/* LIVE DATA: Using actual Green Points from database! */}
-    <MeshHeroCard config={config} icon="leaf-circle" label="GreenPoints Balance" value={userProfile?.greenPoints?.toLocaleString() || "0"} stat1Value="42" stat1Label="Verified Reports" stat2Value="5" stat2Label="Campaigns Joined" />
+const CitizenDashboard = ({ config, openPage, userProfile, navigation }: any) => {
+  const [stats, setStats] = useState({ verifiedReports: 0, campaignsJoined: 0 });
 
-    <SectionHeader title="Streak & Badges" actionText="View All" onPress={() => openPage("streakProgress")} />
-    <View style={styles.listWrapper}>
-      <ListItem icon="fire" title="Active Streak" subtitle="7-day consistency streak is active" tag="+80 Bonus" tagColor="#F59E0B" accent={config.accent} onPress={() => openPage("streakProgress")} />
-      <ListItem icon="medal-outline" title="Badge Progress" subtitle="Recycler badge is 80% complete" tag="2 Left" tagColor={config.accent} accent={config.accent} onPress={() => openPage("badgesOverview")} />
-    </View>
+  useEffect(() => {
+    userService.getMyStats().then(setStats);
+  }, []);
 
-    <SectionHeader title="Nearby Campaigns" actionText="Explore" onPress={() => openPage("nearbyCampaigns")} />
-    <View style={styles.listWrapper}>
-      <ListItem icon="beach" title="City Beach Cleanup" subtitle="Saturday, 08:00 AM" tag="500 Pts" tagColor={config.accent} accent={config.accent} onPress={() => openPage("campaignBeachCleanup")} />
-      <ListItem icon="map-marker-radius-outline" title="Nearby Drives" subtitle="See more clean-up drives around you" tag="12 Open" tagColor="#0EA5E9" accent={config.accent} onPress={() => openPage("nearbyCampaigns")} />
-    </View>
-
-    <SectionHeader title="Recent Reports Status" actionText="See All" onPress={() => openPage("recentReportsStatus")} />
-    <View style={styles.listWrapper}>
-      <ListItem icon="progress-clock" title="Market Road Overflow" subtitle="Pending champion verification" tag="Pending" tagColor="#F59E0B" accent={config.accent} onPress={() => openPage("recentReportsStatus")} />
-      <ListItem icon="check-decagram" title="Lake Road Dumping" subtitle="Assigned to worker team" tag="In Progress" tagColor="#0EA5E9" accent={config.accent} onPress={() => openPage("reportHistory")} />
-    </View>
-
-    <SectionHeader title="Quick Report Waste CTA" />
-    <View style={styles.actionGrid}>
-      <ActionCard 
-        icon="camera-plus" 
-        title="Report Waste" 
-        subtitle="Launch the full citizen report flow" 
-        color={config.accent} 
-        onPress={() => navigation.navigate("ReportWaste")}
+  return (
+    <>
+      {/* REAL DATA HERO CARD */}
+      <MeshHeroCard 
+        config={config} 
+        icon="leaf-circle" 
+        label="GreenPoints Balance" 
+        value={userProfile?.greenPoints?.toLocaleString() || "0"} 
+        stat1Value={stats.verifiedReports.toString()} 
+        stat1Label="Verified Reports" 
+        stat2Value={stats.campaignsJoined.toString()} 
+        stat2Label="Items Sold" 
       />
-      <ActionCard icon="book-open-page-variant" title="Eco Tips" subtitle="Learn quick reporting and segregation tips" color="#0EA5E9" onPress={() => openPage("ecoTips")} />
-    </View>
-  </>
-);
+
+      <SectionHeader title="Marketplace" actionText="Post Scrap" onPress={() => navigation.navigate("PostScrap")} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionGrid}>
+        <ActionCard icon="plus-circle" title="Sell Scrap" subtitle="Turn recyclables into cash" color="#14B8A6" onPress={() => navigation.navigate("PostScrap")} />
+        <ActionCard icon="format-list-bulleted" title="My Listings" subtitle="Manage your active scrap bids" color="#0EA5E9" onPress={() => navigation.navigate("CitizenHistory", { initialTab: 'listings' })} />
+      </ScrollView>
+
+      <SectionHeader title="Civic Action" actionText="Report Waste" onPress={() => navigation.navigate("ReportWaste")} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionGrid}>
+        <ActionCard icon="camera-plus" title="Report Waste" subtitle="Launch the citizen report flow" color={config.accent} onPress={() => navigation.navigate("ReportWaste")} />
+        <ActionCard icon="progress-clock" title="My Reports" subtitle="Check verification status" color="#F59E0B" onPress={() => navigation.navigate("CitizenHistory", { initialTab: 'reports' })} />
+      </ScrollView>
+    </>
+  );
+};
 
 const NgoDashboard = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
   <>
@@ -274,15 +275,14 @@ export function HomeScreen() {
         </View>
 
         <View style={styles.headerActions}>
-          <AnimatedPressable style={styles.iconBtn} onPress={() => openPage("notifications")}>
+          <AnimatedPressable style={styles.iconBtn} onPress={() => Alert.alert("Notifications", "You have no new notifications.")}>
             <Feather name="bell" size={20} color="#0F172A" />
-            <View style={[styles.notificationDot, { backgroundColor: "#F43F5E" }]} />
           </AnimatedPressable>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {activeRole === "citizen" && <CitizenDashboard config={currentConfig} openPage={openPage} userProfile={userProfile} />}
+        {activeRole === "citizen" && <CitizenDashboard config={currentConfig} openPage={openPage} userProfile={userProfile} navigation={navigation} />}
         {activeRole === "ngo" && <NgoDashboard config={currentConfig} openPage={openPage} />}
         {activeRole === "worker" && <WorkerDashboard config={currentConfig} openPage={openPage} />}
         {activeRole === "champion" && <ChampionDashboard config={currentConfig} openPage={openPage} />}
@@ -297,7 +297,7 @@ export function HomeScreen() {
 
 // ... Keep ALL your exact styles down here ...
 const styles = StyleSheet.create({
-  safeArea: { backgroundColor: "#F8FAFC" },
+  safeArea: { flex: 1, backgroundColor: "#F8FAFC" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   emptyTitle: { fontSize: 22, fontWeight: "800", color: "#0F172A", marginTop: 20 },
   emptySubtitle: { fontSize: 15, color: "#64748B", textAlign: "center", marginTop: 8, lineHeight: 22 },
@@ -331,11 +331,24 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 20, fontWeight: "800", color: "#0F172A", letterSpacing: -0.5 },
   sectionActionPill: { backgroundColor: "#F1F5F9", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   sectionActionText: { fontSize: 12, fontWeight: "800", color: "#64748B" },
-  actionGrid: { flexDirection: "row", gap: 16, marginBottom: 36 },
-  actionCard: { flex: 1, backgroundColor: "#FFFFFF", borderRadius: 24, padding: 16, borderWidth: 1, borderColor: "#E2E8F0", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2 },
+  actionGrid: { paddingBottom:20, },
+  actionCard: { 
+    width: width * 0.65,
+    backgroundColor: "#FFFFFF", 
+    borderRadius: 24, 
+    padding: 16, 
+    borderWidth: 1, 
+    borderColor: "#E2E8F0", 
+    shadowColor: "#0F172A", 
+    shadowOffset: { width: 0, height: 6 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 12, 
+    elevation: 3,
+    marginRight: 16
+  },
   actionCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   actionIconBox: { width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center" },
-  actionTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A", marginBottom: 4 },
+  actionTitle: { fontSize: 14, fontWeight: "700", color: "#0F172A", marginBottom: 4 },
   actionSubtitle: { fontSize: 12, color: "#64748B", lineHeight: 16 },
   listWrapper: { gap: 12, marginBottom: 36 },
   listItem: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, borderWidth: 1, borderColor: "#E2E8F0", overflow: "hidden", shadowColor: "#0F172A", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 8, elevation: 1 },

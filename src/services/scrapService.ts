@@ -11,13 +11,14 @@ export interface ScrapListing {
   createdAt: string;
   citizenFirstName?: string;
   citizenLastName?: string;
+  bids?: ScrapBid[];
 }
 
 export interface ScrapBid {
   id: number;
   listingId: number;
   scrapperId: string;
-  amount: string | number; // Decimal comes back as string from some SQL drivers
+  amount: string | number;
   proposedTime: string;
   status: "PENDING" | "ACCEPTED" | "REJECTED";
   createdAt: string;
@@ -26,9 +27,6 @@ export interface ScrapBid {
 }
 
 export const scrapService = {
-  /**
-   * CITIZEN: Create a new scrap listing
-   */
   createListing: async (title: string, description: string, city: string, imageUri: string) => {
     try {
       const formData = new FormData();
@@ -51,9 +49,6 @@ export const scrapService = {
     }
   },
 
-  /**
-   * SCRAPPER: Fetch the open marketplace feed for a specific city
-   */
   getFeed: async (city: string): Promise<ScrapListing[]> => {
     try {
       const response = await apiClient.get(`/scrap/feed?city=${encodeURIComponent(city)}`);
@@ -63,9 +58,6 @@ export const scrapService = {
     }
   },
 
-  /**
-   * SCRAPPER: Place a bid on a listing
-   */
   submitBid: async (listingId: number, amount: number, proposedTime: string): Promise<ScrapBid> => {
     try {
       const response = await apiClient.post(`/scrap/listings/${listingId}/bids`, {
@@ -78,9 +70,6 @@ export const scrapService = {
     }
   },
 
-  /**
-   * CITIZEN: Get all bids for a specific listing
-   */
   getBidsForListing: async (listingId: number): Promise<ScrapBid[]> => {
     try {
       const response = await apiClient.get(`/scrap/listings/${listingId}/bids`);
@@ -90,9 +79,6 @@ export const scrapService = {
     }
   },
 
-  /**
-   * CITIZEN: Accept a winning bid
-   */
   acceptBid: async (bidId: number, listingId: number) => {
     try {
       const response = await apiClient.patch(`/scrap/bids/${bidId}/accept`, {
@@ -101,6 +87,16 @@ export const scrapService = {
       return response.data.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || "Failed to accept bid");
+    }
+  },
+
+  // --- NEW: Fetch ONLY the logged-in Citizen's listings ---
+  getMyListings: async (): Promise<ScrapListing[]> => {
+    try {
+      const response = await apiClient.get("/scrap/my-listings");
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || "Failed to fetch your listings");
     }
   },
 };

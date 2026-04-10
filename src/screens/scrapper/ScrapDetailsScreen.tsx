@@ -1,3 +1,4 @@
+//src/screens/details/ScrapDetailsScreen.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";

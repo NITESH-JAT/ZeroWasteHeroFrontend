@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -29,16 +30,43 @@ export function PostScrapScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(false);
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
-
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-    }
+    Alert.alert(
+      "Upload Evidence",
+      "Choose a photo source",
+      [
+        {
+          text: "Take Photo",
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert("Permission needed", "Please grant camera access to take a photo.");
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              quality: 0.8, // Good quality, but slightly compressed to save server space
+            });
+            if (!result.canceled) {
+              setImageUri(result.assets[0].uri);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+          }
+        },
+        {
+          text: "Choose from Gallery",
+          onPress: async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              quality: 0.8,
+            });
+            if (!result.canceled) {
+              setImageUri(result.assets[0].uri);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+          }
+        },
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
   };
 
   const handlePost = async () => {
