@@ -1,6 +1,6 @@
-export const appRoles: AppRole[] = ["citizen", "ngo", "worker", "champion", "authority", "scrapper"];
+export type AppRole = "citizen" | "ngo" | "worker" | "champion" | "authority" | "scrapper" | "admin";
 
-export type AppRole = "citizen" | "ngo" | "worker" | "champion" | "authority" | "scrapper";
+export const appRoles: AppRole[] = ["citizen", "ngo", "worker", "champion", "authority", "scrapper", "admin"];
 
 export const roleLabels: Record<AppRole, string> = {
   citizen: "Citizen",
@@ -9,6 +9,7 @@ export const roleLabels: Record<AppRole, string> = {
   champion: "Green Champion",
   authority: "Authority",
   scrapper: "Scrap Collector",
+  admin: "System Admin",
 };
 
 // This helper safely maps frontend lowercase roles to the backend UPPERCASE expected by Zod

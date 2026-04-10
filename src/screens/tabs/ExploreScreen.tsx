@@ -7,20 +7,27 @@ import { ScreenSafeArea } from "../../components/ui/ScreenSafeArea";
 import { useAppStore } from "../../store/useAppStore";
 import { campaignService } from "../../services/campaignService";
 import { userService } from "../../services/userService";
+import { championService } from "../../services/championService";
 
 const { width } = Dimensions.get("window");
 
 // Role-Specific Tabs
 const CITIZEN_TABS = ["Campaigns", "Leaderboard"]; 
 const NGO_TABS = ["Community Feed", "Partner NGOs", "Analytics"];
-const WORKER_TABS = ["Task List", "Assigned Work", "Task Status"];
-const CHAMPION_TABS = ["Queue", "Approved", "Escalations"];
+const WORKER_TABS = ["Pending Work", "Completed"];
+const CHAMPION_TABS = ["Queue", "Assigned"];
 const SCRAPPER_TABS = ["Market Feed", "Pricing Guide"];
+const AUTHORITY_TABS = ["City Overview", "NGO Directory", "Penalties"];
 
 export function ExploreScreen() {
-  const activeRole = useAppStore((state) => state.activeRole);
+const rawRole = useAppStore((state) => state.activeRole);
+const activeRole = (rawRole || "").toLowerCase();
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [assignedReports, setAssignedReports] = useState<any[]>([]);
+  const [workerTasks, setWorkerTasks] = useState<any[]>([]);
+  const [ngos, setNgos] = useState<any[]>([]);
+  const [penalties, setPenalties] = useState<any[]>([]);
   
   // States for Citizen Live Data
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -31,39 +38,76 @@ export function ExploreScreen() {
   const navigation = useNavigation<any>();
 
   // Determine which tabs to show based on the logged-in role
-  const currentTabs = activeRole === "ngo" ? NGO_TABS :
+const currentTabs = activeRole === "ngo" ? NGO_TABS :
                       activeRole === "worker" ? WORKER_TABS :
                       activeRole === "champion" ? CHAMPION_TABS :
                       activeRole === "scrapper" ? SCRAPPER_TABS : 
+                      activeRole === "authority" ? AUTHORITY_TABS :
                       CITIZEN_TABS;
 
   // Only fetch Citizen data if the user is actually a Citizen!
-  useEffect(() => {
+useEffect(() => {
     const fetchData = async () => {
-      if (activeRole !== "citizen") return; 
-
       setIsLoading(true);
-      if (activeTab === 0) {
-        try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== "granted") {
-            setLocationStatus("Location denied. Showing recent campaigns.");
-            const data = await campaignService.getCampaigns(); 
+
+      // --- CITIZEN LOGIC ---
+      if (activeRole === "citizen") {
+        if (activeTab === 0) {
+          try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== "granted") {
+              setLocationStatus("Location denied. Showing recent campaigns.");
+              const data = await campaignService.getCampaigns(); 
+              setCampaigns(data);
+            } else {
+              const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+              const data = await campaignService.getCampaigns(location.coords.latitude, location.coords.longitude);
+              setCampaigns(data);
+              setLocationStatus("Showing campaigns near you");
+            }
+          } catch (error) {
+            setLocationStatus("GPS error. Showing recent campaigns.");
+            const data = await campaignService.getCampaigns();
             setCampaigns(data);
-          } else {
-            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-            const data = await campaignService.getCampaigns(location.coords.latitude, location.coords.longitude);
-            setCampaigns(data);
-            setLocationStatus("Showing campaigns near you");
           }
-        } catch (error) {
-          setLocationStatus("GPS error. Showing recent campaigns.");
-          const data = await campaignService.getCampaigns();
-          setCampaigns(data);
+        } else if (activeTab === 1) {
+          const data = await userService.getLeaderboard();
+          setLeaderboard(data);
         }
-      } else if (activeTab === 1) {
-        const data = await userService.getLeaderboard();
-        setLeaderboard(data);
+      } 
+      // --- CHAMPION LOGIC ---
+      else if (activeRole === "champion") {
+        // Tab 0 is just a static button to open the Verification Queue, so we only fetch data for Tab 1
+        if (activeTab === 1) {
+          try {
+            // Make sure championService is imported at the top of your file!
+            const data = await championService.getApprovedReports();
+            setAssignedReports(data);
+          } catch (error) {
+            console.error("Failed to fetch assigned reports", error);
+            setAssignedReports([]);
+          }
+        }
+      }
+      else if (activeRole === "worker") {
+        import("../../services/taskService").then(async (m) => {
+          const data = await m.taskService.getMyTasks();
+          setWorkerTasks(data);
+          setIsLoading(false);
+        });
+      }
+
+      else if (activeRole === "authority") {
+        import("../../services/authorityService").then(async (m) => {
+          if (activeTab === 1) {
+            const data = await m.authorityService.getNgos();
+            setNgos(data);
+          } else if (activeTab === 2) {
+            const data = await m.authorityService.getPenalties();
+            setPenalties(data);
+          }
+          setIsLoading(false);
+        });
       }
       setIsLoading(false);
     };
@@ -131,16 +175,25 @@ export function ExploreScreen() {
                     <Text style={styles.sectionTitle}>Scrap Pricing Guide</Text>
                     <Text style={styles.sectionSubtitle}>Average market rates for materials</Text>
                   </View>
-                  <Pressable style={({ pressed }) => [styles.tipCard, pressed && styles.cardPressed]}>
-                    <View style={[styles.tipIconWrap, { backgroundColor: '#FEF3C7' }]}>
-                      <MaterialCommunityIcons name="scale-balance" size={28} color="#D97706" />
+                  
+                  {/* REAL PRICING LIST */}
+                  {[
+                    { mat: "Cardboard", price: "₹10 - ₹12 / kg", icon: "package-variant", color: "#D97706" },
+                    { mat: "Mixed Plastic", price: "₹15 - ₹18 / kg", icon: "bottle-soda", color: "#0EA5E9" },
+                    { mat: "Iron / Steel", price: "₹25 - ₹30 / kg", icon: "gold", color: "#64748B" },
+                    { mat: "Copper wire", price: "₹400 - ₹450 / kg", icon: "pipe", color: "#F59E0B" },
+                    { mat: "E-Waste", price: "Varies by item", icon: "laptop", color: "#8B5CF6" },
+                  ].map((item, idx) => (
+                    <View key={idx} style={[styles.leaderboardRow, { padding: 16 }]}>
+                      <View style={[styles.rankCircle, { backgroundColor: `${item.color}15` }]}>
+                        <MaterialCommunityIcons name={item.icon as any} size={20} color={item.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.lbName}>{item.mat}</Text>
+                      </View>
+                      <Text style={[styles.lbPoints, { color: item.color }]}>{item.price}</Text>
                     </View>
-                    <View style={styles.tipTextWrap}>
-                      <Text style={styles.tipTitle}>Current Market Rates</Text>
-                      <Text style={styles.tipSubtitle}>Cardboard: ₹12/kg | Mixed Plastic: ₹18/kg | E-Waste: Varies</Text>
-                    </View>
-                    <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
-                  </Pressable>
+                  ))}
                 </View>
               )}
             </>
@@ -159,30 +212,61 @@ export function ExploreScreen() {
               )}
             </>
 
-          /* --- WORKER VIEW --- */
+/* --- WORKER VIEW --- */
           ) : activeRole === "worker" ? (
             <>
               {activeTab === 0 && (
                 <View>
                   <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Task List</Text>
-                    <Text style={styles.sectionSubtitle}>Assigned work items for this shift</Text>
+                    <Text style={styles.sectionTitle}>Pending Work</Text>
+                    <Text style={styles.sectionSubtitle}>Tasks assigned to you by Champions</Text>
                   </View>
-                  <Pressable style={({ pressed }) => [styles.tipCard, pressed && styles.cardPressed]} onPress={() => navigation.navigate("WorkerTask")}>
-                    <View style={styles.tipIconWrap}>
-                      <MaterialCommunityIcons name="camera-burst" size={28} color="#F59E0B" />
-                    </View>
-                    <View style={styles.tipTextWrap}>
-                      <Text style={styles.tipTitle}>Quick Close Task / Upload Proof</Text>
-                      <Text style={styles.tipSubtitle}>Select a task, capture before and after proof, and submit for closure.</Text>
-                    </View>
-                    <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
-                  </Pressable>
+                  {isLoading ? <ActivityIndicator color="#F59E0B" /> : workerTasks.filter(t => t.status === 'ASSIGNED').length === 0 ? (
+                    <Text style={{ textAlign: 'center', color: '#64748B', marginTop: 20 }}>You have no pending tasks.</Text>
+                  ) : (
+                    workerTasks.filter(t => t.status === 'ASSIGNED').map(task => (
+                      <View key={task.id} style={styles.campaignCard}>
+                        <Image source={{ uri: task.reportImageUrl }} style={styles.cardImage} />
+                        <View style={styles.cardBody}>
+                          <Text style={styles.campaignTitle}>Assigned Cleanup</Text>
+                          <Text style={{ color: "#64748B", marginBottom: 12 }}>{task.description || "Clear the designated area."}</Text>
+                          <Pressable style={[styles.joinBtn, { backgroundColor: '#F59E0B' }]} onPress={() => navigation.navigate("WorkerTask")}>
+                            <Text style={styles.joinBtnText}>Upload Proof & Close Task</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
+              {activeTab === 1 && (
+                <View>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Completed Work</Text>
+                    <Text style={styles.sectionSubtitle}>Awaiting Champion verification</Text>
+                  </View>
+                  {isLoading ? <ActivityIndicator color="#F59E0B" /> : workerTasks.filter(t => t.status === 'COMPLETED' || t.status === 'VERIFIED').length === 0 ? (
+                    <Text style={{ textAlign: 'center', color: '#64748B', marginTop: 20 }}>No completed tasks yet.</Text>
+                  ) : (
+                    workerTasks.filter(t => t.status === 'COMPLETED' || t.status === 'VERIFIED').map(task => (
+                      <View key={task.id} style={[styles.leaderboardRow, { padding: 16 }]}>
+                        <View style={[styles.rankCircle, { backgroundColor: task.status === 'VERIFIED' ? "#ECFDF5" : "#FEF3C7" }]}>
+                          <MaterialCommunityIcons name={task.status === 'VERIFIED' ? "check-decagram" : "progress-clock"} size={20} color={task.status === 'VERIFIED' ? "#10B981" : "#F59E0B"} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.lbName}>Cleanup Task</Text>
+                          <Text style={{ fontSize: 13, color: "#64748B" }}>Status: {task.status}</Text>
+                        </View>
+                        <Text style={[styles.lbPoints, { color: "#F59E0B" }]}>+{task.rewardPoints} Pts</Text>
+                      </View>
+                    ))
+                  )}
                 </View>
               )}
             </>
 
-          /* --- CHAMPION VIEW --- */
+
+/* --- CHAMPION VIEW --- */
           ) : activeRole === "champion" ? (
             <>
               {activeTab === 0 && (
@@ -192,15 +276,99 @@ export function ExploreScreen() {
                     <Text style={styles.sectionSubtitle}>Open reports waiting for moderation</Text>
                   </View>
                   <Pressable style={({ pressed }) => [styles.tipCard, pressed && styles.cardPressed]} onPress={() => navigation.navigate("VerifyReports")}>
-                    <View style={styles.tipIconWrap}>
+                    <View style={[styles.tipIconWrap, { backgroundColor: '#EDE9FE' }]}>
                       <MaterialCommunityIcons name="check-decagram-outline" size={28} color="#8B5CF6" />
                     </View>
                     <View style={styles.tipTextWrap}>
                       <Text style={styles.tipTitle}>Open Verification Queue</Text>
-                      <Text style={styles.tipSubtitle}>View proof, check image and location, then approve, reject, clarify, or escalate.</Text>
+                      <Text style={styles.tipSubtitle}>View proof, check image and location, then assign to Green Soldiers.</Text>
                     </View>
                     <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
                   </Pressable>
+                </View>
+              )}
+              {activeTab === 1 && (
+                <View>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Assigned Tasks</Text>
+                    <Text style={styles.sectionSubtitle}>Track worker progress</Text>
+                  </View>
+                  
+                  {isLoading ? (
+                    <ActivityIndicator color="#8B5CF6" style={{ marginTop: 40 }} />
+                  ) : assignedReports.length === 0 ? (
+                    <Text style={{ textAlign: 'center', color: '#64748B', marginTop: 20 }}>No tasks currently assigned.</Text>
+                  ) : (
+                    assignedReports.map((report) => (
+                      <View key={report.id} style={styles.campaignCard}>
+                        <Image source={{ uri: report.imageUrl }} style={styles.cardImage} />
+                        <View style={styles.cardBody}>
+                          <Text style={styles.campaignTitle}>{report.category}</Text>
+                          <Text style={{ color: "#64748B", marginBottom: 12 }}>{report.description}</Text>
+                          
+                          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: "#F1F5F9", paddingTop: 12 }}>
+                            <Text style={{ color: "#64748B", fontSize: 13 }}>
+                              Assigned to: <Text style={{ fontWeight: "700", color: "#0F172A" }}>{report.workerFirstName || "Unknown"}</Text>
+                            </Text>
+                            <View style={{ backgroundColor: report.taskStatus === 'COMPLETED' ? '#ECFDF5' : '#FFFBEB', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                              <Text style={{ color: report.taskStatus === 'COMPLETED' ? '#10B981' : '#F59E0B', fontWeight: "700", fontSize: 12 }}>
+                                {report.taskStatus || 'ASSIGNED'}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
+            </>
+
+
+          /* --- AUTHORITY VIEW --- */
+          ) : activeRole === "authority" ? (
+            <>
+              {activeTab === 0 && (
+                <View>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>City Overview</Text>
+                    <Text style={styles.sectionSubtitle}>Macro-level municipal view</Text>
+                  </View>
+                  {/* Keep it simple: direct them to the other tabs */}
+                  <Pressable style={({ pressed }) => [styles.tipCard, pressed && styles.cardPressed]} onPress={() => setActiveTab(1)}>
+                    <View style={[styles.tipIconWrap, { backgroundColor: '#E0F2FE' }]}><MaterialCommunityIcons name="domain" size={28} color="#0284C7" /></View>
+                    <View style={styles.tipTextWrap}><Text style={styles.tipTitle}>View NGO Directory</Text><Text style={styles.tipSubtitle}>Monitor officially registered NGO partners.</Text></View>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
+                  </Pressable>
+                </View>
+              )}
+
+              {activeTab === 1 && (
+                <View>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Registered NGOs</Text>
+                  </View>
+                  {isLoading ? <ActivityIndicator color="#0EA5E9" /> : ngos.length === 0 ? <Text style={{ textAlign: 'center', color: '#64748B' }}>No NGOs found.</Text> : ngos.map((ngo) => (
+                    <View key={ngo.id} style={[styles.leaderboardRow, { padding: 16 }]}>
+                      <View style={[styles.rankCircle, { backgroundColor: "#E0F2FE" }]}><MaterialCommunityIcons name="domain" size={20} color="#0EA5E9" /></View>
+                      <View style={{ flex: 1 }}><Text style={styles.lbName}>{ngo.firstName}</Text><Text style={{ fontSize: 13, color: "#64748B" }}>{ngo.email}</Text></View>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {activeTab === 2 && (
+                <View>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Issued Penalties</Text>
+                  </View>
+                  {isLoading ? <ActivityIndicator color="#F43F5E" /> : penalties.length === 0 ? <Text style={{ textAlign: 'center', color: '#64748B' }}>No penalties issued yet.</Text> : penalties.map((pen) => (
+                    <View key={pen.id} style={[styles.leaderboardRow, { padding: 16 }]}>
+                      <View style={[styles.rankCircle, { backgroundColor: "#FFE4E6" }]}><MaterialCommunityIcons name="gavel" size={20} color="#F43F5E" /></View>
+                      <View style={{ flex: 1 }}><Text style={styles.lbName}>{pen.reason}</Text><Text style={{ fontSize: 13, color: "#64748B" }}>Issued to: {pen.firstName}</Text></View>
+                      <Text style={[styles.lbPoints, { color: "#F43F5E" }]}>₹{pen.amount}</Text>
+                    </View>
+                  ))}
                 </View>
               )}
             </>

@@ -25,6 +25,7 @@ import { useAppStore } from "../../store/useAppStore";
 import * as Haptics from "expo-haptics";
 import { userService } from "../../services/userService";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { authorityService } from "../../services/authorityService";
 
 const { width } = Dimensions.get("window");
 
@@ -34,6 +35,8 @@ const roleConfig = {
   worker: { accent: "#F59E0B", icon: "truck-fast-outline" },
   champion: { accent: "#8B5CF6", icon: "shield-halved" },
   authority: { accent: "#F43F5E", icon: "office-building-cog-outline" },
+  // Add this new line for the Admin!
+  admin: { accent: "#1E293B", icon: "shield-crown-outline" },
   scrapper: {
     title: "Scrap Collector",
     accent: "#14B8A6",
@@ -195,55 +198,133 @@ const NgoDashboard = ({ config, openPage }: { config: any; openPage: (pageId: Ap
   </>
 );
 
-const WorkerDashboard = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
-  <>
-    <MeshHeroCard config={config} icon="truck-check" label="Today's Assigned Tasks" value="5 Tasks" stat1Value="2" stat1Label="High Priority" stat2Value="12" stat2Label="Closed This Week" />
-    {/* ... remaining unchanged Worker items ... */}
-    <SectionHeader title="Next Task Priority" actionText="Open Flow" onPress={() => navigation.navigate("WorkerTask")} />
-    <View style={styles.listWrapper}>
-      <ListItem icon="alert-circle" title="Clear Sector 4 Park" subtitle="Verified public complaint with 2-hour SLA" tag="High" tagColor="#F43F5E" accent={config.accent} onPress={() => openPage("clearSector4Park")} />
-    </View>
-  </>
-);
+const WorkerDashboard = ({ config, openPage, navigation }: any) => {
+  const [tasks, setTasks] = React.useState<any[]>([]);
 
-const ChampionDashboard = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
-  <>
-    <MeshHeroCard config={config} icon="shield-star" label="Pending Verifications Count" value="18 Reports" stat1Value="4" stat1Label="Urgent Reports" stat2Value="96%" stat2Label="Accuracy Score" />
-    {/* ... remaining unchanged Champion items ... */}
-    <SectionHeader title="Urgent Reports" actionText="Open Queue" onPress={() => navigation.navigate("VerifyReports")} />
-    <View style={styles.listWrapper}>
-      <ListItem icon="alert-circle-outline" title="Overflow bin near Market Road" subtitle="Needs quick proof check and assignment decision" tag="Urgent" tagColor="#F43F5E" accent={config.accent} onPress={() => openPage("verificationQueue")} />
-    </View>
-  </>
-);
+  React.useEffect(() => {
+    import("../../services/taskService").then(m => m.taskService.getMyTasks().then(setTasks));
+  }, []);
 
-const AuthorityDashboard = ({ config, openPage }: { config: any; openPage: (pageId: AppPageId) => void }) => (
-  <>
-    <MeshHeroCard config={config} icon="office-building" label="City Segregation Rate" value="68.5%" stat1Value="24h" stat1Label="Avg Resolution Time" stat2Value="8" stat2Label="Active NGOs" />
-    <SectionHeader title="Operations" />
-    <View style={styles.actionGrid}>
-      <ActionCard icon="file-document-check" title="NGO Approvals" subtitle="Review applications" color={config.accent} onPress={() => openPage("ngoApprovals")} />
-      <ActionCard icon="gavel" title="Penalties" subtitle="Manage defaulters & fines" color="#F43F5E" onPress={() => openPage("issuePenalty")} />
-    </View>
-  </>
-);
+  const pendingTasks = tasks.filter(t => t.status === 'ASSIGNED');
+  const completedTasks = tasks.filter(t => t.status === 'COMPLETED' || t.status === 'VERIFIED');
+  const nextTask = pendingTasks[0];
+
+  return (
+    <>
+      <MeshHeroCard config={config} icon="truck-check" label="My Workload" value={`${pendingTasks.length} Pending`} stat1Value={completedTasks.length.toString()} stat1Label="Completed" stat2Value="100%" stat2Label="Success Rate" />
+      
+      <SectionHeader title="Next Task Priority" actionText="Open Flow" onPress={() => navigation.navigate("WorkerTask")} />
+      <View style={styles.listWrapper}>
+        {nextTask ? (
+          <ListItem 
+            icon="alert-circle" 
+            title="Assigned Cleanup Task" 
+            subtitle={nextTask.description || "Location coordinates provided"} 
+            tag={`${nextTask.rewardPoints} Pts`} 
+            tagColor="#F43F5E" 
+            accent={config.accent} 
+            onPress={() => navigation.navigate("WorkerTask")} 
+          />
+        ) : (
+          <Text style={{ textAlign: 'center', color: '#64748B', padding: 20 }}>No tasks assigned to you right now.</Text>
+        )}
+      </View>
+    </>
+  );
+};
+
+const ChampionDashboard = ({ config, navigation }: any) => {
+  const [stats, setStats] = useState({ pendingCount: 0, urgentCount: 0, accuracy: "98%" });
+  const [urgentReports, setUrgentReports] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    import("../../services/championService").then(m => {
+      m.championService.getStats().then(setStats);
+      m.championService.getPendingReports().then(reports => {
+        // Just grab the first 2 reports for the home screen "urgent" preview
+        setUrgentReports(reports.slice(0, 2)); 
+      });
+    });
+  }, []);
+
+  return (
+    <>
+      <MeshHeroCard config={config} icon="shield-star" label="Pending Verifications" value={`${stats.pendingCount} Reports`} stat1Value={stats.urgentCount.toString()} stat1Label="Urgent Reports" stat2Value={stats.accuracy} stat2Label="Accuracy Score" />
+      
+      <SectionHeader title="Urgent Reports" actionText="Open Queue" onPress={() => navigation.navigate("VerifyReports")} />
+      <View style={styles.listWrapper}>
+        {urgentReports.length === 0 ? (
+          <Text style={{ textAlign: 'center', color: '#64748B', marginVertical: 10 }}>No urgent reports right now.</Text>
+        ) : (
+          urgentReports.map(report => (
+            <ListItem 
+              key={report.id} 
+              icon="alert-circle-outline" 
+              title={report.category} 
+              subtitle={report.description || "Pending review..."} 
+              tag="Urgent" 
+              tagColor="#F43F5E" 
+              accent={config.accent} 
+              onPress={() => navigation.navigate("VerifyReports")} 
+            />
+          ))
+        )}
+      </View>
+    </>
+  );
+};
+
+const AuthorityDashboard = ({ config, openPage, navigation }: any) => {
+  const [stats, setStats] = React.useState({ totalReports: 0, resolvedReports: 0, cleanRate: "0%", activeNgos: 0 });
+
+  React.useEffect(() => {
+    authorityService.getStats().then(setStats);
+  }, []);
+
+  return (
+    <>
+      <MeshHeroCard 
+        config={config} 
+        icon="office-building" 
+        label="City Segregation Rate" 
+        value={stats.cleanRate} 
+        stat1Value={stats.resolvedReports.toString()} 
+        stat1Label="Resolved Reports" 
+        stat2Value={stats.activeNgos.toString()} 
+        stat2Label="Active NGOs" 
+      />
+      <SectionHeader title="City Operations" />
+      <View style={styles.actionGrid}>
+        <ActionCard icon="file-document-check" title="NGO Directory" subtitle="View active NGO partners" color={config.accent} onPress={() => navigation.navigate("Explore")} />
+        <ActionCard icon="gavel" title="Penalties" subtitle="Manage defaulters & fines" color="#F43F5E" onPress={() => navigation.navigate("Explore")} />
+      </View>
+    </>
+  );
+};
 
 // NEW SCRAPPER DASHBOARD MATCHING YOUR UI!
-const ScrapperDashboard = ({ config, navigation }: { config: any; navigation: any }) => (
-  <>
-    <MeshHeroCard config={config} icon="recycle-variant" label="Marketplace Activity" value="Active" stat1Value="0" stat1Label="Bids Placed" stat2Value="0" stat2Label="Completed Pickups" />
-    
-    <SectionHeader title="Marketplace Feed" actionText="View All" onPress={() => navigation.navigate("Explore")} />
-    <View style={styles.actionGrid}>
-      <ActionCard icon="storefront-outline" title="Browse Scrap" subtitle="Find available waste in your city" color={config.accent} onPress={() => navigation.navigate("Explore")} />
-      <ActionCard icon="hand-coin-outline" title="My Bids" subtitle="Track your pending offers" color="#0EA5E9" onPress={() => console.log("Navigate to My Bids")} />
-    </View>
-  </>
-);
+const ScrapperDashboard = ({ config, navigation }: any) => {
+  const [stats, setStats] = useState({ bidsPlaced: 0, pickupsCompleted: 0 });
+
+  React.useEffect(() => {
+    import("../../services/userService").then(m => m.userService.getMyStats().then(setStats));
+  }, []);
+
+  return (
+    <>
+      <MeshHeroCard config={config} icon="recycle-variant" label="Marketplace Activity" value="Active" stat1Value={stats.bidsPlaced.toString()} stat1Label="Bids Placed" stat2Value={stats.pickupsCompleted.toString()} stat2Label="Completed Pickups" />
+      <SectionHeader title="Marketplace Feed" actionText="View All" onPress={() => navigation.navigate("Explore")} />
+      <View style={styles.actionGrid}>
+        <ActionCard icon="storefront-outline" title="Browse Scrap" subtitle="Find available waste in your city" color={config.accent} onPress={() => navigation.navigate("Explore")} />
+        <ActionCard icon="hand-coin-outline" title="My Bids" subtitle="Track your pending offers" color="#0EA5E9" onPress={() => navigation.navigate("ScrapperBids")} />
+      </View>
+    </>
+  );
+};
 
 export function HomeScreen() {
   // LIVE DATA: Grabbing both role AND full profile from Zustand
-  const { activeRole, userProfile } = useAppStore();
+const { activeRole: rawRole, userProfile } = useAppStore(); const activeRole = (rawRole || "").toLowerCase();  
   const navigation = useNavigation<any>(); // <--- Use generic 'any' to allow switching to tabs easily
 
   const openPage = (pageId: AppPageId) => navigation.navigate("Page", { pageId });
@@ -270,7 +351,7 @@ export function HomeScreen() {
           <Text style={styles.greeting}>Good morning, {userProfile?.firstName || "Hero"}</Text>
           <View style={styles.roleBadgeContainer}>
             <View style={[styles.roleBadgeDot, { backgroundColor: currentConfig.accent }]} />
-            <Text style={styles.roleBadgeText}>{roleLabels[activeRole]}</Text>
+            <Text style={styles.roleBadgeText}>{(roleLabels[activeRole] || activeRole || '').toUpperCase()}</Text>
           </View>
         </View>
 
@@ -285,8 +366,8 @@ export function HomeScreen() {
         {activeRole === "citizen" && <CitizenDashboard config={currentConfig} openPage={openPage} userProfile={userProfile} navigation={navigation} />}
         {activeRole === "ngo" && <NgoDashboard config={currentConfig} openPage={openPage} />}
         {activeRole === "worker" && <WorkerDashboard config={currentConfig} openPage={openPage} />}
-        {activeRole === "champion" && <ChampionDashboard config={currentConfig} openPage={openPage} />}
-        {activeRole === "authority" && <AuthorityDashboard config={currentConfig} openPage={openPage} />}
+        {activeRole === "champion" && <ChampionDashboard config={currentConfig} navigation={navigation} openPage={openPage} />}
+        {(activeRole === "authority" || activeRole === "admin") && <AuthorityDashboard config={currentConfig} openPage={openPage} navigation={navigation} />}
         {activeRole === "scrapper" && <ScrapperDashboard config={currentConfig} navigation={navigation} />}
 
         <View style={{ height: 120 }} />

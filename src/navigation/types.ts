@@ -16,6 +16,7 @@ export type RootStackParamList = {
   WorkerTask: undefined;
   ScrapFeed: undefined;
   CitizenHistory: { initialTab: 'reports' | 'listings' };
+  ScrapperBids: undefined;
 };
 
 export type MainTabParamList = {

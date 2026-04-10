@@ -1,43 +1,42 @@
-//src/screens/scrapper/ScrapFeedScreen.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
 import { ScreenSafeArea } from "../../components/ui/ScreenSafeArea";
 import { ScrapListing, scrapService } from "../../services/scrapService";
 
 export function ScrapFeedScreen() {
-  const [searchCity, setSearchCity] = useState("Vadodara"); // Default city for testing
+  const [searchCity, setSearchCity] = useState("Vadodara");
   const [listings, setListings] = useState<ScrapListing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [uiMessage, setUiMessage] = useState(""); // Replaces popup alerts
 
-  // Bidding Modal State
+  // Modals State
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedListing, setSelectedListing] = useState<ScrapListing | null>(null);
   const [bidAmount, setBidAmount] = useState("");
   const [proposedTime, setProposedTime] = useState("");
   const [isBidding, setIsBidding] = useState(false);
 
   const fetchListings = async () => {
+    const cleanCity = searchCity.trim(); // Trim trailing spaces!
+    
+    if (!cleanCity) {
+      setListings([]);
+      setUiMessage("Please enter a city name to view scrap.");
+      setIsLoading(false);
+      setIsRefreshing(false);
+      return;
+    }
+
+    setUiMessage("");
     try {
-      const data = await scrapService.getFeed(searchCity);
+      const data = await scrapService.getFeed(cleanCity);
       setListings(data);
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      setListings([]);
+      setUiMessage(error.message || "Failed to load listings.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -45,7 +44,11 @@ export function ScrapFeedScreen() {
   };
 
   useEffect(() => {
-    fetchListings();
+    const delayDebounceFn = setTimeout(() => {
+      setIsLoading(true);
+      fetchListings();
+    }, 500); // Wait for them to stop typing
+    return () => clearTimeout(delayDebounceFn);
   }, [searchCity]);
 
   const onRefresh = () => {
@@ -53,28 +56,19 @@ export function ScrapFeedScreen() {
     fetchListings();
   };
 
-  const handleOpenBid = (listing: ScrapListing) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setSelectedListing(listing);
-    setBidAmount("");
-    setProposedTime("");
-  };
-
   const handleSubmitBid = async () => {
     if (!selectedListing || !bidAmount || !proposedTime) {
       Alert.alert("Missing Info", "Please provide a bid amount and pickup time.");
       return;
     }
-
     setIsBidding(true);
     try {
       await scrapService.submitBid(selectedListing.id, Number(bidAmount), proposedTime);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Bid Placed! 🚀", "The citizen will be notified of your offer.");
-      setSelectedListing(null); // Close the modal
+      setSelectedListing(null);
     } catch (error: any) {
       Alert.alert("Error", error.message);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsBidding(false);
     }
@@ -82,18 +76,20 @@ export function ScrapFeedScreen() {
 
   const renderListing = ({ item }: { item: ScrapListing }) => (
     <View style={styles.card}>
-      <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+      {/* Clickable Image for Zoom */}
+      <Pressable onPress={() => setSelectedImage(item.imageUrl)}>
+        <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+        <View style={styles.zoomBadge}>
+          <MaterialCommunityIcons name="magnify-plus-outline" size={20} color="#FFF" />
+        </View>
+      </Pressable>
+
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Open</Text>
-          </View>
+          <View style={styles.badge}><Text style={styles.badgeText}>Open</Text></View>
         </View>
-        
-        <Text style={styles.cardDescription} numberOfLines={2}>
-          {item.description || "No description provided."}
-        </Text>
+        <Text style={styles.cardDescription} numberOfLines={2}>{item.description || "No description provided."}</Text>
         
         <View style={styles.cardMeta}>
           <View style={styles.metaRow}>
@@ -106,10 +102,7 @@ export function ScrapFeedScreen() {
           </View>
         </View>
 
-        <Pressable 
-          style={({ pressed }) => [styles.bidBtn, pressed && { opacity: 0.8 }]}
-          onPress={() => handleOpenBid(item)}
-        >
+        <Pressable style={styles.bidBtn} onPress={() => setSelectedListing(item)}>
           <Text style={styles.bidBtnText}>Place a Bid</Text>
         </Pressable>
       </View>
@@ -118,83 +111,60 @@ export function ScrapFeedScreen() {
 
   return (
     <ScreenSafeArea style={styles.container}>
-      {/* Header & City Filter */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Marketplace</Text>
         <View style={styles.searchBar}>
           <MaterialCommunityIcons name="magnify" size={24} color="#94A3B8" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search city..."
-            value={searchCity}
-            onChangeText={setSearchCity}
-            returnKeyType="search"
-          />
+          <TextInput style={styles.searchInput} placeholder="Search city..." value={searchCity} onChangeText={setSearchCity} returnKeyType="search" />
         </View>
       </View>
 
-      {/* Feed List */}
       {isLoading ? (
+        <View style={styles.centerBox}><ActivityIndicator size="large" color="#14B8A6" /></View>
+      ) : uiMessage ? (
         <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color="#14B8A6" />
+          <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#94A3B8" />
+          <Text style={styles.emptyText}>{uiMessage}</Text>
         </View>
       ) : listings.length === 0 ? (
         <View style={styles.centerBox}>
           <MaterialCommunityIcons name="package-variant-closed" size={60} color="#E2E8F0" />
-          <Text style={styles.emptyText}>No scrap available in {searchCity} right now.</Text>
+          <Text style={styles.emptyText}>No scrap available in {searchCity.trim()} right now.</Text>
         </View>
       ) : (
-        <FlatList
-          data={listings}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderListing}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#14B8A6" />}
-        />
+        <FlatList data={listings} keyExtractor={(item) => item.id.toString()} renderItem={renderListing} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#14B8A6" />} />
       )}
+
+      {/* FULL SCREEN IMAGE ZOOM MODAL */}
+      <Modal visible={!!selectedImage} transparent animationType="fade" onRequestClose={() => setSelectedImage(null)}>
+        <View style={styles.fullScreenImageBg}>
+          <Pressable style={styles.closeImageBtn} onPress={() => setSelectedImage(null)}>
+            <MaterialCommunityIcons name="close" size={32} color="#FFF" />
+          </Pressable>
+          {selectedImage && <Image source={{ uri: selectedImage }} style={styles.fullScreenImage} resizeMode="contain" />}
+        </View>
+      </Modal>
 
       {/* BIDDING BOTTOM SHEET MODAL */}
       <Modal visible={!!selectedListing} transparent animationType="slide" onRequestClose={() => setSelectedListing(null)}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={() => setSelectedListing(null)} />
-          
           <View style={styles.sheetContent}>
             <View style={styles.dragIndicator} />
             <Text style={styles.sheetTitle}>Offer on {selectedListing?.title}</Text>
             
             <Text style={styles.label}>Your Bid Amount (₹)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 500"
-              keyboardType="numeric"
-              value={bidAmount}
-              onChangeText={setBidAmount}
-            />
+            <TextInput style={styles.input} placeholder="e.g. 500" keyboardType="numeric" value={bidAmount} onChangeText={setBidAmount} />
 
             <Text style={styles.label}>Proposed Pickup Time</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Tomorrow at 4:00 PM"
-              value={proposedTime}
-              onChangeText={setProposedTime}
-            />
+            <TextInput style={styles.input} placeholder="e.g. Tomorrow at 4:00 PM" value={proposedTime} onChangeText={setProposedTime} />
 
-            <Pressable 
-              style={({ pressed }) => [styles.submitBidBtn, isBidding && { opacity: 0.7 }, pressed && { transform: [{ scale: 0.98 }] }]}
-              onPress={handleSubmitBid}
-              disabled={isBidding}
-            >
-              {isBidding ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.submitBidBtnText}>Send Offer</Text>
-              )}
+            <Pressable style={styles.submitBidBtn} onPress={handleSubmitBid} disabled={isBidding}>
+              {isBidding ? <ActivityIndicator color="#FFF" /> : <Text style={styles.submitBidBtnText}>Send Offer</Text>}
             </Pressable>
           </View>
         </KeyboardAvoidingView>
       </Modal>
-
     </ScreenSafeArea>
   );
 }
@@ -208,6 +178,7 @@ const styles = StyleSheet.create({
   listContent: { padding: 20, gap: 16 },
   card: { backgroundColor: "#FFF", borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: "#E2E8F0", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
   cardImage: { width: "100%", height: 180, backgroundColor: "#F1F5F9" },
+  zoomBadge: { position: "absolute", bottom: 12, right: 12, backgroundColor: "rgba(0,0,0,0.6)", padding: 8, borderRadius: 20 },
   cardContent: { padding: 16 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   cardTitle: { fontSize: 18, fontWeight: "700", color: "#0F172A", flex: 1, marginRight: 10 },
@@ -222,6 +193,11 @@ const styles = StyleSheet.create({
   centerBox: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40 },
   emptyText: { color: "#64748B", fontSize: 16, textAlign: "center", marginTop: 16 },
   
+  /* Zoom Image Styles */
+  fullScreenImageBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
+  fullScreenImage: { width: "100%", height: "80%" },
+  closeImageBtn: { position: "absolute", top: 50, right: 20, zIndex: 10, padding: 10 },
+
   /* Modal Styles */
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(15, 23, 42, 0.4)" },

@@ -41,7 +41,7 @@ export function ProfileScreen() {
           
           <View style={styles.roleBadge}>
             <MaterialCommunityIcons name="shield-check" size={14} color="#00D65B" />
-            <Text style={styles.roleText}>{roleLabels[userProfile.role].toUpperCase()}</Text>
+            <Text style={styles.roleText}>{(roleLabels[userProfile.role] || userProfile.role || '').toUpperCase()}</Text>
           </View>
         </View>
 

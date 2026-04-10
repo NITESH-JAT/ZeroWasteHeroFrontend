@@ -49,10 +49,18 @@ export const scrapService = {
     }
   },
 
-  getFeed: async (city: string): Promise<ScrapListing[]> => {
+    getFeed: async (city: string): Promise<ScrapListing[]> => {
     try {
       const response = await apiClient.get(`/scrap/feed?city=${encodeURIComponent(city)}`);
-      return response.data.data;
+
+      const mappedData = response.data.data.map((item: any) => ({
+        ...item,
+        imageUrl: item.image_url || item.imageUrl, // <-- The Magic Line!
+        citizenId: item.citizen_id || item.citizenId,
+        createdAt: item.created_at || item.createdAt
+      }));
+
+      return mappedData;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || "Failed to fetch feed");
     }
@@ -90,13 +98,29 @@ export const scrapService = {
     }
   },
 
-  // --- NEW: Fetch ONLY the logged-in Citizen's listings ---
-  getMyListings: async (): Promise<ScrapListing[]> => {
+getMyListings: async (): Promise<ScrapListing[]> => {
     try {
       const response = await apiClient.get("/scrap/my-listings");
-      return response.data.data;
+
+      const mappedData = response.data.data.map((item: any) => ({
+        ...item,
+        imageUrl: item.image_url || item.imageUrl,
+        citizenId: item.citizen_id || item.citizenId,
+        createdAt: item.created_at || item.createdAt
+      }));
+
+      return mappedData;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || "Failed to fetch your listings");
+    }
+  },
+
+  getMyBids: async () => {
+    try {
+      const response = await apiClient.get("/scrap/my-bids");
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || "Failed to fetch your bids");
     }
   },
 };

@@ -1,14 +1,14 @@
-//src/screens/tabs/RewardsScreen.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
-import { Alert, Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Dimensions, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { ScreenSafeArea } from "../../components/ui/ScreenSafeArea";
 import type { AppPageId } from "../../navigation/pageRegistry";
 import type { RootStackParamList } from "../../navigation/types";
 import { useAppStore } from "../../store/useAppStore";
+import { apiClient } from "../../api/client";
 
 const { width } = Dimensions.get("window");
 
@@ -18,7 +18,7 @@ const roleConfig = {
   worker: { accent: "#F59E0B", icon: "medal", currency: "Earned Points" },
   champion: { accent: "#8B5CF6", icon: "star-circle", currency: "Community Pool" },
   authority: { accent: "#F43F5E", icon: "bank", currency: "CSR Funding" },
-  // ADDED SCRAPPER CONFIG
+  admin: { accent: "#1E293B", icon: "shield-crown-outline", currency: "City Treasury" }, // FIXED: Admin added here
   scrapper: { accent: "#14B8A6", icon: "wallet-outline", currency: "Marketplace Spend" },
 };
 
@@ -192,45 +192,157 @@ const NgoRewards = ({ config, openPage }: any) => (
   </>
 );
 
-const ChampionRewards = ({ config, openPage }: any) => (
-  <>
-    <MeshWalletCard config={config} balance="10,000" subtext="Monthly bonus pool for Ward 15" onHistoryPress={() => openPage("rewardHistory")} />
-    <SectionHeader title="Community Allocation" />
-    <View style={styles.actionList}>
-      <ActionListItem icon="medal-outline" title="Award Bonus Points" subtitle="Distribute to top performing blocks" color={config.accent} onPress={() => openPage("awardBonusPoints")} />
-    </View>
-  </>
-);
+const ChampionRewards = ({ config }: any) => {
+  const [showBonusModal, setShowBonusModal] = React.useState(false);
+  const [workerId, setWorkerId] = React.useState("");
+  const [points, setPoints] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-const AuthorityRewards = ({ config, openPage }: any) => (
-  <>
-    <MeshWalletCard config={config} balance="Rs2.5M" subtext="Total CSR & Sponsorship Funding" onHistoryPress={() => openPage("rewardHistory")} />
-    <SectionHeader title="Ecosystem Funding" />
-    <View style={styles.actionList}>
-      <ActionListItem icon="bank-transfer" title="Fund Allocation" subtitle="Distribute budgets to NGOs" color="#0EA5E9" onPress={() => openPage("fundAllocation")} />
-    </View>
-  </>
-);
+  const handleAwardBonus = async () => {
+    if (!workerId || !points || isNaN(Number(points))) {
+      Alert.alert("Error", "Please provide a valid Worker ID and numeric Points.");
+      return;
+    }
 
-// NEW SCRAPPER DASHBOARD
-const ScrapperRewards = ({ config, openPage }: any) => (
-  <>
-    <MeshWalletCard config={config} balance="₹0" subtext="Total earnings tracked from accepted bids" onHistoryPress={() => console.log("History")} />
-    <SectionHeader title="Marketplace Badges" />
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-      <BadgeCard icon="star-circle-outline" title="Top Buyer" color="#F59E0B" onPress={() => console.log("Badges")} />
-      <BadgeCard icon="truck-fast-outline" title="Fast Pickup" color="#14B8A6" onPress={() => console.log("Badges")} />
-    </ScrollView>
-    <SectionHeader title="Analytics" />
-    <View style={styles.actionList}>
-      <ActionListItem icon="chart-line" title="Spending Report" subtitle="View your bid success rate and total spend." color={config.accent} onPress={() => console.log("Analytics")} />
-    </View>
-  </>
-);
+    setIsSubmitting(true);
+    try {
+      await apiClient.post("/champion/award-bonus", { workerId: workerId.trim(), points: Number(points) });
+      Alert.alert("Success! 🎉", `Awarded ${points} bonus points to Worker ${workerId}!`);
+      setShowBonusModal(false);
+      setWorkerId("");
+      setPoints("");
+    } catch (error: any) {
+      Alert.alert("Error", error.response?.data?.message || "Failed to award points.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <MeshWalletCard config={config} balance="10,000" subtext="Monthly bonus pool for Ward 15" onHistoryPress={() => console.log("History")} />
+      <SectionHeader title="Community Allocation" />
+      <View style={styles.actionList}>
+        <ActionListItem 
+          icon="medal-outline" 
+          title="Award Bonus Points" 
+          subtitle="Distribute to top performing Green Soldiers" 
+          color={config.accent} 
+          onPress={() => setShowBonusModal(true)} 
+        />
+      </View>
+
+      <Modal visible={showBonusModal} transparent animationType="slide" onRequestClose={() => setShowBonusModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowBonusModal(false)} />
+          <View style={styles.sheetContent}>
+            <View style={styles.dragIndicator} />
+            <Text style={styles.sheetTitle}>Award Bonus Points</Text>
+            
+            <Text style={styles.label}>Green Soldier (Worker ID)</Text>
+            <TextInput style={styles.input} placeholder="e.g. 5e1b... (UUID)" value={workerId} onChangeText={setWorkerId} />
+
+            <Text style={styles.label}>Points to Award</Text>
+            <TextInput style={styles.input} placeholder="e.g. 500" keyboardType="numeric" value={points} onChangeText={setPoints} />
+
+            <Pressable style={[styles.submitBtn, { backgroundColor: config.accent }, isSubmitting && { opacity: 0.7 }]} onPress={handleAwardBonus} disabled={isSubmitting}>
+              {isSubmitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.submitBtnText}>Send Points</Text>}
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </>
+  );
+};
+
+// FIXED: AUTHORITY & ADMIN UNIVERSAL REWARD MODAL
+const AuthorityRewards = ({ config }: any) => {
+  const [showModal, setShowModal] = React.useState(false);
+  const [targetUserId, setTargetUserId] = React.useState("");
+  const [points, setPoints] = React.useState("");
+  const [reason, setReason] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const handleGrantReward = async () => {
+    if (!targetUserId || !points || !reason || isNaN(Number(points))) {
+      Alert.alert("Missing Info", "Please provide a valid User ID, numeric points, and a reason.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      // NOTE: Maps to a custom admin route, or you can map it to an existing reward endpoint
+      await apiClient.post("/admin/grant-reward", { 
+        userId: targetUserId.trim(), 
+        points: Number(points),
+        reason: reason
+      });
+      Alert.alert("Success! 🎉", `Granted ${points} points to user.`);
+      setShowModal(false);
+      setTargetUserId(""); setPoints(""); setReason("");
+    } catch (error: any) {
+      Alert.alert("Error", error.response?.data?.message || "Failed to grant points. Ensure backend route exists.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <MeshWalletCard config={config} balance="Unlimited" subtext="City Treasury & Admin Allocation" onHistoryPress={() => console.log("History")} />
+      <SectionHeader title="Admin Controls" />
+      <View style={styles.actionList}>
+        <ActionListItem 
+          icon="star-shooting" 
+          title="Grant Manual Reward" 
+          subtitle="Award GreenPoints to any user (Citizen, Worker, NGO)" 
+          color={config.accent} 
+          onPress={() => setShowModal(true)} 
+        />
+      </View>
+
+      <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowModal(false)} />
+          <View style={styles.sheetContent}>
+            <View style={styles.dragIndicator} />
+            <Text style={styles.sheetTitle}>Grant Universal Reward</Text>
+            
+            <TextInput style={styles.input} placeholder="User ID (UUID)" value={targetUserId} onChangeText={setTargetUserId} />
+            <TextInput style={styles.input} placeholder="Points Amount" keyboardType="numeric" value={points} onChangeText={setPoints} />
+            <TextInput style={styles.input} placeholder="Reason (e.g., Outstanding Volunteering)" value={reason} onChangeText={setReason} />
+
+            <Pressable style={[styles.submitBtn, { backgroundColor: config.accent }]} onPress={handleGrantReward} disabled={isSubmitting}>
+              {isSubmitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.submitBtnText}>Send Points</Text>}
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </>
+  );
+};
+
+// SCRAPPER DASHBOARD
+const ScrapperRewards = ({ config }: any) => {
+  const [spent, setSpent] = React.useState(0);
+  React.useEffect(() => {
+    import("../../services/userService").then(m => m.userService.getMyStats().then(res => setSpent(res.totalSpent || 0)));
+  }, []);
+
+  return (
+    <>
+      <MeshWalletCard config={config} balance={`₹${spent.toLocaleString()}`} subtext="Total earnings tracked from accepted bids" onHistoryPress={() => console.log("History")} />
+      <SectionHeader title="Marketplace Badges" />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+        <BadgeCard icon="star-circle-outline" title="Top Buyer" color="#F59E0B" />
+        <BadgeCard icon="truck-fast-outline" title="Fast Pickup" color="#14B8A6" />
+      </ScrollView>
+    </>
+  );
+};
 
 export function RewardsScreen() {
-  // PULLED USER PROFILE FROM STATE
-  const { activeRole, userProfile } = useAppStore();
+const { activeRole: rawRole, userProfile } = useAppStore();
+ const activeRole = (rawRole || "").toLowerCase();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   if (!activeRole) {
@@ -244,7 +356,8 @@ export function RewardsScreen() {
     );
   }
 
-  const currentConfig = roleConfig[activeRole as keyof typeof roleConfig];
+  // FIXED: Fallback added just in case an unknown role loads
+  const currentConfig = roleConfig[activeRole as keyof typeof roleConfig] || roleConfig.citizen;
   const openPage = (pageId: AppPageId) => navigation.navigate("Page", { pageId });
 
   return (
@@ -263,8 +376,10 @@ export function RewardsScreen() {
           {activeRole === "worker" && <WorkerRewards config={currentConfig} openPage={openPage} />}
           {activeRole === "ngo" && <NgoRewards config={currentConfig} openPage={openPage} />}
           {activeRole === "champion" && <ChampionRewards config={currentConfig} openPage={openPage} />}
-          {activeRole === "authority" && <AuthorityRewards config={currentConfig} openPage={openPage} />}
           {activeRole === "scrapper" && <ScrapperRewards config={currentConfig} openPage={openPage} />}
+          
+          {/* FIXED: Admin & Authority render block */}
+          {(activeRole === "authority" || activeRole === "admin") && <AuthorityRewards config={currentConfig} openPage={openPage} />}
 
           <View style={{ height: 140 }} />
         </ScrollView>
@@ -274,7 +389,7 @@ export function RewardsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { backgroundColor: "#F8FAFC" },
+  safeArea: { backgroundColor: "#F8FAFC", flex: 1 },
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   emptyState: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyTitle: { fontSize: 20, fontWeight: "700", color: "#0F172A", marginTop: 16 },
@@ -324,4 +439,13 @@ const styles = StyleSheet.create({
   actionListContent: { flex: 1, marginRight: 12 },
   actionListTitle: { fontSize: 16, fontWeight: "800", color: "#0F172A", marginBottom: 4 },
   actionListSubtitle: { fontSize: 13, color: "#64748B", fontWeight: "500" },
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(15, 23, 42, 0.4)" },
+  sheetContent: { backgroundColor: "#FFF", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: Platform.OS === "ios" ? 40 : 24 },
+  dragIndicator: { width: 40, height: 5, borderRadius: 3, backgroundColor: "#E2E8F0", alignSelf: "center", marginBottom: 20 },
+  sheetTitle: { fontSize: 20, fontWeight: "800", color: "#0F172A", marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: "700", color: "#334155", marginBottom: 8 },
+  input: { backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 12, padding: 16, fontSize: 16, color: "#0F172A", marginBottom: 20 },
+  submitBtn: { height: 56, borderRadius: 16, justifyContent: "center", alignItems: "center", marginTop: 10 },
+  submitBtnText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
 });

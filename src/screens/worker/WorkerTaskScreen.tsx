@@ -1,56 +1,71 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { ScreenSafeArea } from "../../components/ui/ScreenSafeArea";
 import { RootStackParamList } from "../../navigation/types";
+import { taskService } from "../../services/taskService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "WorkerTask">;
 
 export function WorkerTaskScreen({ navigation }: Props) {
-  const [afterImageUri, setAfterImageUri] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
+  useEffect(() => {
+    fetchTasks();
+  }, []);
 
-    if (!result.canceled) {
-      setAfterImageUri(result.assets[0].uri);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const fetchTasks = async () => {
+    try {
+      const data = await taskService.getMyTasks();
+      // Only show tasks that need proof!
+      setTasks(data.filter((t: any) => t.status === 'ASSIGNED'));
+    } catch (error) {
+      Alert.alert("Error", "Failed to fetch tasks");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleResolve = async () => {
-    if (!afterImageUri) {
-      Alert.alert("Proof Required", "You must upload a photo showing the area is clean.");
-      return;
-    }
+  const handleUploadProof = async (taskId: string) => {
+    Alert.alert("Upload Proof", "Capture a photo of the cleaned area.", [
+      {
+        text: "Take Photo",
+        onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') return Alert.alert("Permission needed", "Please grant camera access.");
+          
+          const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+          if (!result.canceled) submitProof(taskId, result.assets[0].uri);
+        }
+      },
+      {
+        text: "Choose from Gallery",
+        onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
+          if (!result.canceled) submitProof(taskId, result.assets[0].uri);
+        }
+      },
+      { text: "Cancel", style: "cancel" }
+    ]);
+  };
 
-    setIsLoading(true);
-    // Simulate API Upload
-    setTimeout(() => {
-      setIsLoading(false);
+  const submitProof = async (taskId: string, imageUri: string) => {
+    setIsSubmitting(taskId);
+    try {
+      await taskService.completeTask(taskId, imageUri);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Task Closed! 🏆", "Great job keeping the city clean.", [
-        { text: "Back to Route", onPress: () => navigation.goBack() }
-      ]);
-    }, 1500);
+      Alert.alert("Task Completed! 🌍", "Proof uploaded. A Champion will verify it shortly.");
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+    } catch (error: any) {
+      Alert.alert("Upload Failed", error.message);
+    } finally {
+      setIsSubmitting(null);
+    }
   };
 
   return (
@@ -59,82 +74,62 @@ export function WorkerTaskScreen({ navigation }: Props) {
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#0F172A" />
         </Pressable>
-        <Text style={styles.headerTitle}>Active Task</Text>
+        <Text style={styles.headerTitle}>Close Task</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Task Details */}
-        <View style={styles.taskCard}>
-          <View style={styles.taskHeader}>
-            <MaterialCommunityIcons name="alert-circle" size={20} color="#F59E0B" />
-            <Text style={styles.taskTitle}>Clear Sector 4 Park</Text>
-          </View>
-          <Text style={styles.taskDesc}>Verified public complaint of mixed dump near the main entrance.</Text>
-          <View style={styles.locationBadge}>
-            <MaterialCommunityIcons name="crosshairs-gps" size={16} color="#0284C7" />
-            <Text style={styles.locationText}>Navigate to 22.3072, 73.1812</Text>
-          </View>
+      {isLoading ? (
+        <View style={styles.centerBox}><ActivityIndicator size="large" color="#F59E0B" /></View>
+      ) : tasks.length === 0 ? (
+        <View style={styles.centerBox}>
+          <MaterialCommunityIcons name="check-all" size={60} color="#10B981" />
+          <Text style={styles.emptyText}>You have no open tasks.</Text>
         </View>
-
-        {/* Proof Upload */}
-        <Text style={styles.sectionTitle}>Upload Proof of Resolution</Text>
-        <Pressable style={styles.uploadBox} onPress={pickImage}>
-          {afterImageUri ? (
-            <Image source={{ uri: afterImageUri }} style={styles.previewImage} />
-          ) : (
-            <View style={styles.uploadCta}>
-              <View style={styles.iconCircle}>
-                <MaterialCommunityIcons name="camera-outline" size={32} color="#F59E0B" />
+      ) : (
+        <FlatList
+          data={tasks}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={{ padding: 20, gap: 16 }}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Image source={{ uri: item.reportImageUrl }} style={styles.cardImage} />
+              <View style={styles.cardContent}>
+                <Text style={styles.title}>Assigned Cleanup</Text>
+                <Text style={styles.description}>{item.description || "Clear waste from this location."}</Text>
+                
+                <Pressable 
+                  style={[styles.uploadBtn, isSubmitting === item.id && { opacity: 0.7 }]} 
+                  onPress={() => handleUploadProof(item.id)}
+                  disabled={isSubmitting === item.id}
+                >
+                  {isSubmitting === item.id ? <ActivityIndicator color="#FFF" /> : (
+                    <>
+                      <MaterialCommunityIcons name="camera-plus" size={20} color="#FFF" />
+                      <Text style={styles.uploadBtnText}>Upload After Photo</Text>
+                    </>
+                  )}
+                </Pressable>
               </View>
-              <Text style={styles.uploadText}>Take "After" Photo</Text>
-              <Text style={styles.uploadSubtext}>Show that the area is completely cleared</Text>
             </View>
           )}
-        </Pressable>
-
-        <Pressable 
-          style={({ pressed }) => [
-            styles.resolveBtn, 
-            (!afterImageUri || isLoading) && { opacity: 0.5 },
-            pressed && { transform: [{ scale: 0.98 }] }
-          ]} 
-          onPress={handleResolve}
-          disabled={!afterImageUri || isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <>
-              <MaterialCommunityIcons name="check-all" size={22} color="#FFF" />
-              <Text style={styles.resolveBtnText}>Mark as Resolved</Text>
-            </>
-          )}
-        </Pressable>
-      </ScrollView>
+        />
+      )}
     </ScreenSafeArea>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#FFF", justifyContent: "center", alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#FFF", justifyContent: "center", alignItems: "center", elevation: 2 },
   headerTitle: { fontSize: 20, fontWeight: "800", color: "#0F172A" },
-  content: { padding: 24 },
-  taskCard: { backgroundColor: "#FFF", padding: 20, borderRadius: 24, borderWidth: 1, borderColor: "#E2E8F0", marginBottom: 32 },
-  taskHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  taskTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A" },
-  taskDesc: { fontSize: 15, color: "#64748B", lineHeight: 22, marginBottom: 16 },
-  locationBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "#E0F2FE", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, gap: 6, alignSelf: "flex-start" },
-  locationText: { color: "#0369A1", fontWeight: "700", fontSize: 13 },
-  sectionTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A", marginBottom: 16 },
-  uploadBox: { width: "100%", height: 250, backgroundColor: "#FFF", borderRadius: 24, borderWidth: 2, borderColor: "#E2E8F0", borderStyle: "dashed", justifyContent: "center", alignItems: "center", overflow: "hidden", marginBottom: 24 },
-  previewImage: { width: "100%", height: "100%" },
-  uploadCta: { alignItems: "center", padding: 20 },
-  iconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#FEF3C7", justifyContent: "center", alignItems: "center", marginBottom: 12 },
-  uploadText: { fontSize: 16, fontWeight: "700", color: "#0F172A", marginBottom: 4 },
-  uploadSubtext: { fontSize: 13, color: "#64748B", textAlign: "center" },
-  resolveBtn: { backgroundColor: "#F59E0B", height: 60, borderRadius: 20, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 10, shadowColor: "#F59E0B", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 15, elevation: 6 },
-  resolveBtnText: { color: "#FFF", fontSize: 17, fontWeight: "700" },
+  centerBox: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40 },
+  emptyText: { color: "#64748B", fontSize: 16, marginTop: 16, fontWeight: "600" },
+  card: { backgroundColor: "#FFF", borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: "#E2E8F0" },
+  cardImage: { width: "100%", height: 160, backgroundColor: "#F1F5F9" },
+  cardContent: { padding: 16 },
+  title: { fontSize: 18, fontWeight: "800", color: "#0F172A", marginBottom: 4 },
+  description: { fontSize: 14, color: "#64748B", marginBottom: 16 },
+  uploadBtn: { backgroundColor: "#F59E0B", flexDirection: "row", height: 50, borderRadius: 12, justifyContent: "center", alignItems: "center", gap: 8 },
+  uploadBtnText: { color: "#FFF", fontSize: 15, fontWeight: "700" },
 });
