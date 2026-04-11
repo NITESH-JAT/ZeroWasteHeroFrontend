@@ -1,3 +1,4 @@
+//src/screens/tabs/ProfileScreen.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";

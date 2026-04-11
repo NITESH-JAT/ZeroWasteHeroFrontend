@@ -1,3 +1,4 @@
+//src/screens/tabs/ActionScreen.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -13,38 +14,81 @@ import { authorityService } from "../../services/authorityService";
 const { width } = Dimensions.get("window");
 
 // --- REUSABLE TACTILE CARDS ---
+
 const PrimaryActionCard = ({ title, subtitle, icon, accent, onPress }: any) => (
   <Pressable 
-    style={({ pressed }) => [styles.primaryCard, { backgroundColor: accent }, pressed && { transform: [{ scale: 0.97 }] }]}
-    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); if (onPress) onPress(); }}
+    style={({ pressed }) => [
+      styles.primaryCard, 
+      { backgroundColor: accent },
+      pressed && { transform: [{ scale: 0.97 }] }
+    ]}
+    onPress={() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (onPress) onPress();
+    }}
   >
-    <View style={styles.primaryIconBox}><MaterialCommunityIcons name={icon} size={48} color="#FFFFFF" /></View>
+    <View style={styles.primaryIconBox}>
+      <MaterialCommunityIcons name={icon} size={48} color="#FFFFFF" />
+    </View>
     <View style={styles.primaryTextWrap}>
       <Text style={styles.primaryTitle}>{title}</Text>
       <Text style={styles.primarySubtitle}>{subtitle}</Text>
     </View>
-    <View style={styles.primaryArrowBox}><MaterialCommunityIcons name="arrow-right" size={24} color={accent} /></View>
+    <View style={styles.primaryArrowBox}>
+      <MaterialCommunityIcons name="arrow-right" size={24} color={accent} />
+    </View>
   </Pressable>
 );
 
 const SecondaryActionCard = ({ title, icon, color, onPress }: any) => (
   <Pressable 
-    style={({ pressed }) => [styles.secondaryCard, pressed && { transform: [{ scale: 0.97 }], backgroundColor: "#F8FAFC" }]}
-    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); if (onPress) onPress(); }}
+    style={({ pressed }) => [
+      styles.secondaryCard,
+      pressed && { transform: [{ scale: 0.97 }], backgroundColor: "#F8FAFC" }
+    ]}
+    onPress={() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (onPress) onPress();
+    }}
   >
-    <View style={[styles.secondaryIconBox, { backgroundColor: `${color}15` }]}><MaterialCommunityIcons name={icon} size={28} color={color} /></View>
+    <View style={[styles.secondaryIconBox, { backgroundColor: `${color}15` }]}>
+      <MaterialCommunityIcons name={icon} size={28} color={color} />
+    </View>
     <Text style={styles.secondaryTitle}>{title}</Text>
   </Pressable>
 );
 
 // --- ROLE-SPECIFIC ACTION LAYOUTS ---
+
 const CitizenActions = ({ navigation }: any) => (
   <View style={styles.actionLayout}>
-    <PrimaryActionCard title="Report Waste" subtitle="Snap a photo & geo-tag to earn points" icon="camera" accent="#00D65B" onPress={() => navigation.navigate("ReportWaste")} />
-    <PrimaryActionCard title="Sell Scrap" subtitle="List recyclables on the marketplace" icon="recycle" accent="#14B8A6" onPress={() => navigation.navigate("PostScrap")} />
+    <PrimaryActionCard 
+      title="Report Waste" 
+      subtitle="Snap a photo & geo-tag to earn points" 
+      icon="camera" 
+      accent="#00D65B" 
+      onPress={() => navigation.navigate("ReportWaste")}
+    />
+    <PrimaryActionCard 
+      title="Sell Scrap" 
+      subtitle="List recyclables on the marketplace" 
+      icon="recycle" 
+      accent="#14B8A6" 
+      onPress={() => navigation.navigate("PostScrap")}
+    />
     <View style={styles.secondaryGrid}>
-      <SecondaryActionCard title="My Reports" icon="file-document-outline" color="#00D65B" onPress={() => navigation.navigate("CitizenHistory", { initialTab: 'reports' })} />
-      <SecondaryActionCard title="My Listings" icon="storefront-outline" color="#14B8A6" onPress={() => navigation.navigate("CitizenHistory", { initialTab: 'listings' })} />
+      <SecondaryActionCard 
+        title="My Reports" 
+        icon="file-document-outline" 
+        color="#00D65B" 
+        onPress={() => navigation.navigate("CitizenHistory", { initialTab: 'reports' })} 
+      />
+      <SecondaryActionCard 
+        title="My Listings" 
+        icon="storefront-outline" 
+        color="#14B8A6" 
+        onPress={() => navigation.navigate("CitizenHistory", { initialTab: 'listings' })} 
+      />
     </View>
   </View>
 );
@@ -70,16 +114,35 @@ const WorkerActions = ({ openPage, navigation }: any) => (
 );
 
 const ChampionActions = ({ navigation }: any) => {
-  const hotspots = [{ area: "Akota Gardens", count: 12 }, { area: "Fatehgunj Market", count: 8 }, { area: "Sayajigunj", count: 5 }, { area: "Alkapuri Sector 2", count: 4 }];
+  const hotspots = [
+    { area: "Akota Gardens", count: 12 },
+    { area: "Fatehgunj Market", count: 8 },
+    { area: "Sayajigunj", count: 5 },
+    { area: "Alkapuri Sector 2", count: 4 }
+  ];
+
   return (
     <View style={styles.actionLayout}>
-      <PrimaryActionCard title="Verify Reports" subtitle="Review pending citizen uploads" icon="check-decagram" accent="#8B5CF6" onPress={() => navigation.navigate("VerifyReports")} />
-      <View style={styles.sectionHeader}><Text style={[styles.secondaryTitle, { textAlign: 'left', marginBottom: 8 }]}>Major Report Hotspots</Text></View>
+      <PrimaryActionCard 
+        title="Verify Reports" 
+        subtitle="Review pending citizen uploads" 
+        icon="check-decagram" 
+        accent="#8B5CF6" 
+        onPress={() => navigation.navigate("VerifyReports")} 
+      />
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.secondaryTitle, { textAlign: 'left', marginBottom: 8 }]}>Major Report Hotspots</Text>
+      </View>
       <View style={styles.hotspotGrid}>
         {hotspots.map((item, index) => (
           <View key={index} style={styles.hotspotCard}>
-            <View style={styles.hotspotIconBox}><MaterialCommunityIcons name="fire-alert" size={20} color="#F43F5E" /></View>
-            <View><Text style={styles.hotspotArea}>{item.area}</Text><Text style={styles.hotspotCount}>{item.count} reports</Text></View>
+            <View style={styles.hotspotIconBox}>
+              <MaterialCommunityIcons name="fire-alert" size={20} color="#F43F5E" />
+            </View>
+            <View>
+              <Text style={styles.hotspotArea}>{item.area}</Text>
+              <Text style={styles.hotspotCount}>{item.count} reports</Text>
+            </View>
           </View>
         ))}
       </View>
@@ -89,7 +152,13 @@ const ChampionActions = ({ navigation }: any) => {
 
 const AuthorityActions = ({ navigation, onOpenPenalty }: any) => (
   <View style={styles.actionLayout}>
-    <PrimaryActionCard title="Issue Penalty" subtitle="Log a violation or fine a defaulter" icon="gavel" accent="#F43F5E" onPress={onOpenPenalty} />
+    <PrimaryActionCard 
+      title="Issue Penalty" 
+      subtitle="Log a violation or fine a defaulter" 
+      icon="gavel" 
+      accent="#F43F5E" 
+      onPress={onOpenPenalty}
+    />
     <View style={styles.secondaryGrid}>
       <SecondaryActionCard title="NGO Approvals" icon="file-document-check" color="#0EA5E9" onPress={() => navigation.navigate("Explore" as any)} />
       <SecondaryActionCard title="Broadcast Alert" icon="bullhorn" color="#0F172A" onPress={() => Alert.alert("Coming Soon", "Broadcast feature is under development.")} />
@@ -109,41 +178,29 @@ const ScrapperActions = ({ navigation }: any) => (
 
 // --- MAIN SCREEN COMPONENT ---
 export function ActionScreen() {
-  // ✅ THE FIX: Force the role to lowercase immediately!
-  const rawRole = useAppStore((state) => state.activeRole);
-  const activeRole = (rawRole || "").toLowerCase();
-
+  const activeRole = useAppStore((state) => state.activeRole);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  // Penalty Modal State
+  // Authority Penalty Modal State
   const [showPenaltyModal, setShowPenaltyModal] = useState(false);
-  const [cityUsers, setCityUsers] = useState<any[]>([]);
-  const [searchUser, setSearchUser] = useState("");
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [defaulterId, setDefaulterId] = useState("");
   const [penaltyAmount, setPenaltyAmount] = useState("");
   const [penaltyReason, setPenaltyReason] = useState("");
   const [isIssuing, setIsIssuing] = useState(false);
 
   const openPage = (pageId: AppPageId) => navigation.navigate("Page", { pageId });
 
-  // Open Modal and Fetch Users
-  const handleOpenPenalty = async () => {
-    setShowPenaltyModal(true);
-    const users = await authorityService.getUsers();
-    setCityUsers(users);
-  };
-
   const handleIssuePenalty = async () => {
-    if (!selectedUser || !penaltyAmount || !penaltyReason) {
-      Alert.alert("Missing Info", "Please select a user and fill out all fields.");
+    if (!defaulterId || !penaltyAmount || !penaltyReason) {
+      Alert.alert("Missing Info", "All fields are required.");
       return;
     }
     setIsIssuing(true);
     try {
-      await authorityService.issuePenalty(selectedUser.id, Number(penaltyAmount), penaltyReason);
-      Alert.alert("Success", `Penalty issued to ${selectedUser.firstName}.`);
+      await authorityService.issuePenalty(defaulterId, Number(penaltyAmount), penaltyReason);
+      Alert.alert("Success", "Penalty issued successfully.");
       setShowPenaltyModal(false);
-      setSelectedUser(null); setPenaltyAmount(""); setPenaltyReason(""); setSearchUser("");
+      setDefaulterId(""); setPenaltyAmount(""); setPenaltyReason("");
     } catch (error: any) {
       Alert.alert("Error", error.message);
     } finally {
@@ -154,9 +211,12 @@ export function ActionScreen() {
   return (
     <ScreenSafeArea style={styles.safeArea}>
       <View style={styles.container}>
+        
+        {/* Soft Background Accents */}
         <View style={styles.bgBlobGreen} />
         <View style={styles.bgBlobBlue} />
 
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Action Center</Text>
           <Text style={styles.subtitle}>Select an action to continue.</Text>
@@ -174,15 +234,16 @@ export function ActionScreen() {
               {activeRole === "ngo" && <NgoActions openPage={openPage} />}
               {activeRole === "worker" && <WorkerActions openPage={openPage} navigation={navigation} />}
               {activeRole === "champion" && <ChampionActions navigation={navigation} />}
-              {(activeRole === "authority" || activeRole === "admin") && <AuthorityActions navigation={navigation} onOpenPenalty={handleOpenPenalty} />}
+              {activeRole === "authority" && <AuthorityActions navigation={navigation} onOpenPenalty={() => setShowPenaltyModal(true)} />}
               {activeRole === "scrapper" && <ScrapperActions navigation={navigation} />}
             </View>
           )}
+          
           <View style={{ height: 140 }} />
         </ScrollView>
       </View>
 
-      {/* AUTHORITY PENALTY MODAL WITH USER PICKER */}
+      {/* AUTHORITY PENALTY MODAL */}
       <Modal visible={showPenaltyModal} transparent animationType="slide" onRequestClose={() => setShowPenaltyModal(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={() => setShowPenaltyModal(false)} />
@@ -190,42 +251,8 @@ export function ActionScreen() {
             <View style={styles.dragIndicator} />
             <Text style={styles.sheetTitle}>Issue Penalty</Text>
             
-            {/* USER SELECTOR / SEARCH */}
-            {selectedUser ? (
-              <View style={styles.selectedUserBox}>
-                <View>
-                  <Text style={styles.selectedUserName}>{selectedUser.firstName} {selectedUser.lastName}</Text>
-                  <Text style={styles.selectedUserRole}>{selectedUser.role}</Text>
-                </View>
-                <Pressable onPress={() => setSelectedUser(null)} style={styles.changeUserBtn}>
-                  <Text style={styles.changeUserText}>Change</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <View>
-                <TextInput 
-                  style={[styles.input, { marginBottom: 8 }]} 
-                  placeholder="Search user by name..." 
-                  value={searchUser} 
-                  onChangeText={setSearchUser} 
-                />
-                <ScrollView style={{ maxHeight: 160, marginBottom: 16, borderRadius: 12, borderWidth: 1, borderColor: "#E2E8F0" }} nestedScrollEnabled>
-                  {cityUsers
-                    .filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchUser.toLowerCase()))
-                    .map(u => (
-                      <Pressable key={u.id} style={styles.userRow} onPress={() => setSelectedUser(u)}>
-                        <View style={styles.userAvatar}><Text style={styles.userAvatarText}>{u.firstName[0]}</Text></View>
-                        <View>
-                          <Text style={styles.userName}>{u.firstName} {u.lastName}</Text>
-                          <Text style={styles.userRole}>{u.role}</Text>
-                        </View>
-                      </Pressable>
-                    ))}
-                </ScrollView>
-              </View>
-            )}
-
-            <TextInput style={styles.input} placeholder="Penalty Amount (₹)" keyboardType="numeric" value={penaltyAmount} onChangeText={setPenaltyAmount} />
+            <TextInput style={styles.input} placeholder="Defaulter ID (UUID)" value={defaulterId} onChangeText={setDefaulterId} />
+            <TextInput style={styles.input} placeholder="Amount (₹)" keyboardType="numeric" value={penaltyAmount} onChangeText={setPenaltyAmount} />
             <TextInput style={styles.input} placeholder="Reason (e.g. Illegal Dumping)" value={penaltyReason} onChangeText={setPenaltyReason} />
 
             <Pressable style={[styles.submitBtn, isIssuing && { opacity: 0.7 }]} onPress={handleIssuePenalty} disabled={isIssuing}>
@@ -234,6 +261,7 @@ export function ActionScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
     </ScreenSafeArea>
   );
 }
@@ -262,12 +290,16 @@ const styles = StyleSheet.create({
   secondaryTitle: { fontSize: 15, fontWeight: "800", color: "#0F172A", textAlign: "center" },
   emptyState: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 60 },
   emptyText: { fontSize: 16, fontWeight: "600", color: "#94A3B8", marginTop: 16 },
+
+  /* Champion Hotspots */
   sectionHeader: { marginBottom: 16 },
   hotspotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   hotspotCard: { width: '48%', backgroundColor: '#FFF', padding: 12, borderRadius: 20, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
   hotspotIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#FFF1F2', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   hotspotArea: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
   hotspotCount: { fontSize: 11, color: '#64748B', fontWeight: '500' },
+
+  /* Modal Styles */
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(15, 23, 42, 0.4)" },
   sheetContent: { backgroundColor: "#FFF", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: Platform.OS === "ios" ? 40 : 24 },
@@ -275,15 +307,5 @@ const styles = StyleSheet.create({
   sheetTitle: { fontSize: 20, fontWeight: "800", color: "#0F172A", marginBottom: 20 },
   input: { backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 12, padding: 16, fontSize: 16, color: "#0F172A", marginBottom: 12 },
   submitBtn: { backgroundColor: "#F43F5E", height: 56, borderRadius: 16, justifyContent: "center", alignItems: "center", marginTop: 8 },
-  submitBtnText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
-  userRow: { flexDirection: "row", alignItems: "center", padding: 12, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", backgroundColor: "#FFF" },
-  userAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#E0F2FE", justifyContent: "center", alignItems: "center", marginRight: 12 },
-  userAvatarText: { fontSize: 16, fontWeight: "800", color: "#0284C7" },
-  userName: { fontSize: 15, fontWeight: "700", color: "#0F172A" },
-  userRole: { fontSize: 12, color: "#64748B", marginTop: 2, textTransform: "uppercase" },
-  selectedUserBox: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#F0FDF4", padding: 16, borderRadius: 12, borderWidth: 1, borderColor: "#86EFAC", marginBottom: 16 },
-  selectedUserName: { fontSize: 16, fontWeight: "800", color: "#166534" },
-  selectedUserRole: { fontSize: 12, color: "#15803D", marginTop: 4, textTransform: "uppercase" },
-  changeUserBtn: { backgroundColor: "#DCFCE7", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  changeUserText: { fontSize: 13, fontWeight: "700", color: "#166534" },
+  submitBtnText: { color: "#FFF", fontSize: 16, fontWeight: "700" }
 });

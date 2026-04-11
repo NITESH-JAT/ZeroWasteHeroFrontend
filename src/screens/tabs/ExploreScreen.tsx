@@ -1,3 +1,4 @@
+//src/screens/tabs/ExploreScreen.tsx
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import * as Location from "expo-location";

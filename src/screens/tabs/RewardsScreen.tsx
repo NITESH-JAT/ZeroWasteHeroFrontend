@@ -1,3 +1,4 @@
+//src/screens/tabs/RewardsScreen.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
